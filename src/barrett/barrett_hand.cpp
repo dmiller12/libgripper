@@ -9,18 +9,44 @@ namespace barrett {
 BarrettHand::BarrettHand() : driver_(std::make_unique<BarrettHandDriver>()), is_first(true) {}
 BarrettHand::~BarrettHand() { shutdown(); }
 
-bool BarrettHand::initialize(const std::string& port) {
+
+bool BarrettHand::isInitialized() {
+    auto status_result = driver_->sendSupervisoryCommand("1234FGET S").get();
+
+    if (!status_result) {
+        return false;
+    }
+
+    std::stringstream raw_status(status_result.value());
+    std::array<int, 4> status;
+
+    // 0 indicates motor is initialized
+    if (raw_status >> status[0] >> status[1] >> status[2] >> status[3]) {
+        for (const int& s: status) {
+            std::cout << s << std::endl;
+            if (s != 0){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool BarrettHand::initialize(const std::string& port, bool force) {
     if (!driver_->connect(port)) {
         return false;
     }
 
+    if (force || !isInitialized()) {
 
-    // TODO: Check status of hand. Do not initialize if not needed  
-    auto initilize_result = driver_->sendSupervisoryCommand("HI").get();
-    
-    if (!initilize_result) {
-        std::cerr << "Failed to initialize hand: " << initilize_result.error().message() << std::endl;
-        return false;
+        auto initilize_result = driver_->sendSupervisoryCommand("HI").get();
+        
+        if (!initilize_result) {
+            std::cerr << "Failed to initialize hand: " << initilize_result.error().message() << std::endl;
+            return false;
+        }
     }
 
     RealtimeSettings realtime_settings;

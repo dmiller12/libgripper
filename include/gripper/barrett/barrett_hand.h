@@ -31,7 +31,7 @@ public:
     BarrettHand(const BarrettHand&) = delete;
     BarrettHand& operator=(const BarrettHand&) = delete;
 
-    bool initialize(const std::string& port);
+    bool initialize(const std::string& port, bool force=false);
     void shutdown();
     void setGraspVelocity(double velocity);
     void setSpread(double spread_position);
@@ -40,6 +40,7 @@ public:
 private:
     boost::optional<RealtimeControlSetpoint> velocityPassthroughCallback(const RealtimeFeedback& feedback);
     bool startRealtimeControl();
+    bool isInitialized();
 
     double countsToRadians(int32_t counts, MotorID motor) const;
     int32_t radiansToCounts(double radians, MotorID motor) const;
