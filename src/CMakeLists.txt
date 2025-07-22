@@ -1,6 +1,8 @@
 add_library(libgripper
     barrett/barrett_hand.cpp
     barrett/barrett_hand_driver.cpp
+    barrett/position_controller.cpp
+    barrett/velocity_controller.cpp
     communication/serial_communicator.cpp
 )
 

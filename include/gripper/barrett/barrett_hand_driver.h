@@ -26,14 +26,12 @@ std::vector<MotorID> getMotorsInGroup(MotorGroup group);
 
 
 struct RealtimeFeedback {
-    // TODO: array probably more efficient
     std::map<MotorID, int32_t> positions;
     std::map<MotorID, int8_t> velocities;
     boost::optional<int8_t> temperature_c;
 };
 
 struct RealtimeControlSetpoint {
-    // TODO: array probably more efficient
     std::map<MotorID, int8_t> velocity_commands;
     std::map<MotorID, uint8_t> proportional_gains;
     std::map<MotorID, int16_t> torque_commands;

@@ -1,15 +1,16 @@
 #pragma once
 
 #include "gripper/barrett/barrett_hand_driver.h"
+#include "gripper/barrett/constants.h"
+#include "gripper/barrett/low_pass_filter.h"
+#include "gripper/barrett/position_controller.h"
+#include "gripper/barrett/velocity_controller.h"
+#include <cmath>
 #include <memory>
-#include <atomic>
 #include <mutex>
 
 namespace gripper {
 namespace barrett {
-
-constexpr double ENCODER_COUNTS_PER_RADIAN_FINGER = 8010.17763;
-constexpr double ENCODER_COUNTS_PER_RADIAN_SPREAD = 1001.40056;
 
 /**
  * @class BarrettHand
@@ -23,37 +24,55 @@ struct HandState {
     boost::optional<double> temperature_celsius;
 };
 
+enum class ControlMode { None, Position, Velocity };
+
 class BarrettHand {
-public:
+  public:
     BarrettHand();
     ~BarrettHand();
 
     BarrettHand(const BarrettHand&) = delete;
     BarrettHand& operator=(const BarrettHand&) = delete;
 
-    bool initialize(const std::string& port, bool force=false);
+    bool initialize(const std::string& port, bool force = false);
     void shutdown();
-    void setGraspVelocity(double velocity);
+    void setPosition(const std::array<double, 4>& positions);
+    void setVelocity(const std::array<double, 4>& positions, bool sync_position = true);
+    void setVelocity(const double& finger, const double& spread);
     void setSpread(double spread_position);
     HandState getLatestState() const;
 
-private:
-    boost::optional<RealtimeControlSetpoint> velocityPassthroughCallback(const RealtimeFeedback& feedback);
+  private:
+    boost::optional<RealtimeControlSetpoint> controlLoopCallback(const RealtimeFeedback& feedback);
     bool startRealtimeControl();
     bool isInitialized();
 
     double countsToRadians(int32_t counts, MotorID motor) const;
     int32_t radiansToCounts(double radians, MotorID motor) const;
-    int8_t velocityRadToCounts(double velocity_rad_per_sec, MotorID motor) const;
+    double velocityRadToCounts(double velocity_rad_per_sec, MotorID motor) const;
     double velocityCountsToRad(int8_t velocity_counts, MotorID motor) const;
+    int8_t prepareVelocity(double velocity_counts, uint8_t LCVC) const;
 
     std::unique_ptr<BarrettHandDriver> driver_;
-    std::atomic<double> target_grasp_velocity_{0.0};
+    std::array<double, 4> target_position_{};
+    std::array<double, 4> target_velocity_{};
     mutable std::mutex state_mutex_;
+    mutable std::mutex target_mutex_;
     HandState latest_state_;
-    double last_position;
+    HandState prev_state_;
     std::chrono::steady_clock::time_point last_time;
-    bool is_first;
+    bool is_first{true};
+    RealtimeSettings realtime_settings_;
+    ControlMode control_mode_{ControlMode::None};
+    PositionController position_contoller_{{18.0, 18.0, 18.0, 0.1}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}};
+    PositionController sync_position_contoller_{{4.0, 4.0, 4.0, 0.0}, {0.1, 0.1, 0.1, 0.0}, {0.001, 0.001, 0.001, 0.0}};
+    bool sync_position_{true};
+    VelocityController velocity_contoller_{{40, 40, 40, 0.05}, {10.0, 10.0, 10.0, 0.1}, {0.1, 0.1, 0.1, 0.0}};
+    static constexpr double FINGER_ALPHA = 0.8;
+    static constexpr double SPREAD_ALPHA = 0.3;
+    static constexpr double EXTERNAL_CLOCK = 1.25e6;
+    static constexpr double SAMPLE_TIME = 16 * (32) * (1 / EXTERNAL_CLOCK); // From HCTL-1100 docs
+    LowPassFilter velocity_filter_{{FINGER_ALPHA, FINGER_ALPHA, FINGER_ALPHA, SPREAD_ALPHA}};
 };
 
 } // namespace barrett

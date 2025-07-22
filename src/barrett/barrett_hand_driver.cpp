@@ -145,13 +145,13 @@ outcome::result<void, std::error_code> BarrettHandDriver::configureRealtime(cons
             std::stringstream cmd;
             cmd << prefix << "FSET";
             cmd << " LCV " << (motor_setting.LCV ? 1 : 0);
-            cmd << " LCVC " << (motor_setting.LCV ? 1 : 0); // TODO: Currently not user provided
+            cmd << " LCVC " << static_cast<int>(motor_setting.LCVC);
             cmd << " LCPG " << (motor_setting.LCPG ? 1 : 0);
             cmd << " LCT " << (motor_setting.LCT ? 1 : 0);
             cmd << " LFV " << (motor_setting.LFV ? 1 : 0);
-            cmd << " LFVC 1";
+            cmd << " LFVC " << static_cast<int>(motor_setting.LFVC);
             cmd << " LFAP " << (motor_setting.LFAP ? 1 : 0);
-            cmd << " LFS 0";
+            cmd << " LFS 0"; // No strain gauge on our bhand
             cmd << " LFDP 0";
             cmd << " LFBP 0";
             cmd << " LFAIN 0";
@@ -210,7 +210,27 @@ void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
     RealtimeFeedback feedback;
     size_t feedback_size = calculateFeedbackBlockSize(group);
 
-    // TODO: Should do an initial call to get state before using feedback.
+    std::vector<uint8_t> control_block;
+    control_block.push_back('A');
+
+    if (!communicator_->write(control_block).get()) {
+        std::cerr << "BarrettHandDriver RT ERROR: Write failed." << std::endl;
+    }
+
+    std::vector<uint8_t> feedback_block = communicator_->read(feedback_size, 100).get();
+
+    if (!feedback_block.empty()) {
+        auto parsed_feedback_result = parseFeedbackBlock(feedback_block, group);
+
+        if (parsed_feedback_result) {
+            feedback = parsed_feedback_result.value();
+        } else {
+            std::cerr << "Parsing Error: " << parsed_feedback_result.error().message() << std::endl;
+        }
+    } else {
+            std::cerr << "Empty response" << std::endl;
+    }
+
     while (in_realtime_mode_ && !stop_threads_) {
         auto maybe_setpoint = realtime_callback_(feedback);
 
@@ -235,9 +255,9 @@ void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
                         );
                     }
                     if (motor_settings.LCT) {
-                        control_block.push_back(
-                            setpoint.torque_commands.count(motor_id) ? setpoint.torque_commands.at(motor_id) : 0
-                        );
+                        const int16_t torque_command = setpoint.torque_commands.count(motor_id) ? setpoint.torque_commands.at(motor_id) : 0;
+                        control_block.push_back(static_cast<uint8_t>(torque_command >> 8));
+                        control_block.push_back(static_cast<uint8_t>(torque_command & 0xFF));
                     }
                 }
             }
