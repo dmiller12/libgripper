@@ -188,11 +188,11 @@ std::future<std::vector<uint8_t>> SerialCommunicator::read_until(std::string del
         timer_.expires_after(std::chrono::milliseconds(timeout_ms));
         timer_.async_wait([&, promise](const boost::system::error_code& ec) {
             if (ec)
-                return;            // Timer was cancelled, not expired
-            port_.cancel();        // Timer expired, cancel the read operation.
+                return;     // Timer was cancelled, not expired
+            port_.cancel(); // Timer expired, cancel the read operation.
             try {
                 promise->set_value({}); // Fulfill promise with empty vector.
-                      //
+                                        //
             } catch (const std::future_error&) {
                 // catch "broken promise" error if user discards future.
             }
