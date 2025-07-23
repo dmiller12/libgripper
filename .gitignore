@@ -1,0 +1,121 @@
+# C++ .gitignore
+
+# Compiled Object files
+*.o
+*.obj
+*.lo
+*.la
+*.slo
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Static libraries
+*.a
+*.lib
+
+# Compiled Shared libraries
+*.so
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+*.app
+*.ipa
+
+# Build directories
+build/
+bin/
+obj/
+release/
+debug/
+Release/
+Debug/
+x64/
+x86/
+**/[Bb]uild*/
+**/[Dd]ebug/
+**/[Rr]elease/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeLists.txt.user
+CTestTestfile.cmake
+compile_commands.json
+.cache/
+
+# Makefiles
+Makefile
+Makefile.Debug
+Makefile.Release
+
+# Visual Studio / Visual C++
+*.suo
+*.user
+*.vcxproj.user
+*.vcxproj.filters
+*.sln.docstates
+*.tlog
+*.log
+*.vs/
+.vs/
+*.opensdf
+*.sdf
+ipch/
+*.aps
+*.ncb
+*.plg
+*.opt
+*~
+*.ilk
+*.pdb
+*.idb
+*.pgc
+*.pgd
+
+# VS Code
+.vscode/
+
+# Qt Creator
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+
+# CLion
+.idea/
+
+# Eclipse
+.cproject
+.project
+.settings/
+
+# Netbeans
+nbproject/
+
+# Doxygen documentation
+Doxyfile.bak
+html/
+latex/
+
+# Other
+*.stackdump
+*.dmp
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Dependency Management (e.g., vcpkg, Conan)
+vcpkg_installed/
+conanbuildinfo.cmake
+conaninfo.txt
+
+
