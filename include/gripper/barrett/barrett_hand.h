@@ -1,7 +1,6 @@
 #pragma once
 
 #include "gripper/barrett/barrett_hand_driver.h"
-#include "gripper/barrett/constants.h"
 #include "gripper/barrett/low_pass_filter.h"
 #include "gripper/barrett/position_controller.h"
 #include "gripper/barrett/velocity_controller.h"
@@ -14,7 +13,7 @@ namespace barrett {
 
 /**
  * @class BarrettHand
- * @brief A high-level teleoperation controller for the BarrettHand. This is the
+ * @brief A high-level controller for the BarrettHand. This is the
  * recommended class for most users.
  */
 
@@ -39,19 +38,15 @@ class BarrettHand {
     void setPosition(const std::array<double, 4>& positions);
     void setVelocity(const std::array<double, 4>& positions, bool sync_position = true);
     void setVelocity(const double& finger, const double& spread);
-    void setSpread(double spread_position);
+    void moveTo(const MotorGroup& group, const double& position);
+    void open(const MotorGroup& group);
+    void close(const MotorGroup& group);
     HandState getLatestState() const;
 
   private:
     boost::optional<RealtimeControlSetpoint> controlLoopCallback(const RealtimeFeedback& feedback);
     bool startRealtimeControl();
     bool isInitialized();
-
-    double countsToRadians(int32_t counts, MotorID motor) const;
-    int32_t radiansToCounts(double radians, MotorID motor) const;
-    double velocityRadToCounts(double velocity_rad_per_sec, MotorID motor) const;
-    double velocityCountsToRad(int8_t velocity_counts, MotorID motor) const;
-    int8_t prepareVelocity(double velocity_counts, uint8_t LCVC) const;
 
     std::unique_ptr<BarrettHandDriver> driver_;
     std::array<double, 4> target_position_{};
@@ -70,8 +65,6 @@ class BarrettHand {
     VelocityController velocity_contoller_{{40, 40, 40, 0.05}, {10.0, 10.0, 10.0, 0.1}, {0.1, 0.1, 0.1, 0.0}};
     static constexpr double FINGER_ALPHA = 0.8;
     static constexpr double SPREAD_ALPHA = 0.3;
-    static constexpr double EXTERNAL_CLOCK = 1.25e6;
-    static constexpr double SAMPLE_TIME = 16 * (32) * (1 / EXTERNAL_CLOCK); // From HCTL-1100 docs
     LowPassFilter velocity_filter_{{FINGER_ALPHA, FINGER_ALPHA, FINGER_ALPHA, SPREAD_ALPHA}};
 };
 

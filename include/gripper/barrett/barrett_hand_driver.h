@@ -51,6 +51,14 @@ struct RealtimeSettings {
     bool LFT = false; // Loop Feedback Temperature
 };
 
+
+std::string motorGroupToPrefix(MotorGroup group);
+
+std::string motorIDToPrefix(MotorID id);
+
+std::vector<MotorID> getMotorsInGroup(MotorGroup group);
+
+
 /**
  * @class BarrettHandDriver
  * @brief Low-level driver for the BH8-Series BarrettHand.

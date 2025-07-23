@@ -1,4 +1,5 @@
 #include "gripper/barrett/barrett_hand.h"
+#include "gripper/barrett/utils.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -131,16 +132,76 @@ void BarrettHand::setVelocity(const double& finger, const double& spread) {
     sync_position_ = true;
 }
 
-void BarrettHand::setSpread(double spread_position) {
-    if (!driver_ || !driver_->isConnected())
-        return;
+void BarrettHand::open(const MotorGroup& group) {
+    std::string prefix = motorGroupToPrefix(group);
 
-    float clamped_spread = std::max(0.0, std::min(spread_position, M_PI));
-    int target_position = radiansToCounts(clamped_spread, MotorID::Spread);
+    std::stringstream cmd;
+    cmd << prefix << "O";
 
     driver_->stopRealtimeControl();
-    driver_->sendSupervisoryCommand("SM " + std::to_string(target_position));
+    driver_->sendSupervisoryCommand(cmd.str());
     this->startRealtimeControl();
+    
+}
+
+void BarrettHand::close(const MotorGroup& group) {
+    std::string prefix = motorGroupToPrefix(group);
+
+    std::stringstream cmd;
+    cmd << prefix << "C";
+
+    driver_->stopRealtimeControl();
+    (void)driver_->sendSupervisoryCommand(cmd.str()).get();
+    this->startRealtimeControl();
+    
+
+}
+
+bool hasIntersection(const std::vector<MotorID>& motors, const std::vector<MotorID>& targets) {
+    for (MotorID targetMotor : targets) {
+        // Check if the target motor exists in the main vector
+        if (std::find(motors.begin(), motors.end(), targetMotor) != motors.end()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void BarrettHand::moveTo(const MotorGroup& group, const double& position) {
+
+    std::vector<MotorID> motors = getMotorsInGroup(group);
+
+    auto it = std::find(motors.begin(), motors.end(), MotorID::Spread);
+
+    if (it != motors.end()) {
+
+        motors.erase(it);
+        
+        std::string prefix = motorGroupToPrefix(MotorGroup::Spread);
+        double clamped_pos = std::max(RADIAN_SPREAD_MIN, std::min(position, RADIAN_SPREAD_MAX));
+        int32_t pos_count = radiansToCounts(clamped_pos, MotorID::Spread);
+        std::stringstream cmd;
+        cmd << prefix << " " << static_cast<int>(pos_count);
+        (void)driver_->sendSupervisoryCommand(cmd.str()).get(); //ignore result
+
+    }
+
+    if (hasIntersection(motors, getMotorsInGroup(MotorGroup::AllFingers))) {
+
+        double clamped_pos = std::max(RADIAN_FINGER_MIN, std::min(position, RADIAN_FINGER_MAX));
+        int32_t pos_count = radiansToCounts(clamped_pos, MotorID::Spread);
+        std::stringstream cmd;
+        for (const auto& m  : motors) {
+            cmd << motorIDToPrefix(m);
+        }
+        cmd <<  " " << static_cast<int>(pos_count);
+        (void)driver_->sendSupervisoryCommand(cmd.str()).get(); //ignore result
+
+    }
+
+    driver_->stopRealtimeControl();
+    this->startRealtimeControl();
+    
 }
 
 HandState BarrettHand::getLatestState() const {
@@ -292,51 +353,6 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
 
     printState(local_state);
     return setpoint;
-}
-
-double BarrettHand::countsToRadians(int32_t counts, MotorID motor) const {
-    if (motor == MotorID::F1 || motor == MotorID::F2 || motor == MotorID::F3) {
-        return static_cast<double>(counts) / ENCODER_COUNTS_PER_RADIAN_FINGER;
-    } else {
-        return static_cast<double>(counts) / ENCODER_COUNTS_PER_RADIAN_SPREAD;
-    }
-}
-
-int32_t BarrettHand::radiansToCounts(double radians, MotorID motor) const {
-    if (motor == MotorID::F1 || motor == MotorID::F2 || motor == MotorID::F3) {
-        return static_cast<int32_t>(radians * ENCODER_COUNTS_PER_RADIAN_FINGER);
-    } else {
-        return static_cast<int32_t>(radians * ENCODER_COUNTS_PER_RADIAN_SPREAD);
-    }
-}
-
-int8_t BarrettHand::prepareVelocity(double velocity_count, uint8_t LCVC) const {
-    double vel_shifted = 16 * velocity_count / static_cast<double>(LCVC);
-    if (vel_shifted > 127) {
-        vel_shifted = 127;
-    }
-    if (vel_shifted < -128) {
-        vel_shifted = -128;
-    }
-    return static_cast<int8_t>(vel_shifted);
-}
-
-double BarrettHand::velocityRadToCounts(double velocity_rad_per_sec, MotorID motor) const {
-    if (motor == MotorID::F1 || motor == MotorID::F2 || motor == MotorID::F3) {
-        return velocity_rad_per_sec * ENCODER_COUNTS_PER_RADIAN_FINGER * SAMPLE_TIME;
-    } else {
-
-        return velocity_rad_per_sec * ENCODER_COUNTS_PER_RADIAN_SPREAD * SAMPLE_TIME;
-    }
-}
-
-double BarrettHand::velocityCountsToRad(int8_t velocity_counts, MotorID motor) const {
-    double ticks_per_second = 100.0;
-    if (motor == MotorID::F1 || motor == MotorID::F2 || motor == MotorID::F3) {
-        return (static_cast<double>(velocity_counts) * ticks_per_second) / ENCODER_COUNTS_PER_RADIAN_FINGER;
-    } else {
-        return (static_cast<double>(velocity_counts) * ticks_per_second) / ENCODER_COUNTS_PER_RADIAN_SPREAD;
-    }
 }
 
 } // namespace barrett

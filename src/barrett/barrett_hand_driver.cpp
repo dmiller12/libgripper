@@ -30,6 +30,20 @@ std::string motorGroupToPrefix(MotorGroup group) {
     return "";
 }
 
+std::string motorIDToPrefix(MotorID id) {
+    switch (id) {
+        case MotorID::F1:
+            return "1";
+        case MotorID::F2:
+            return "2";
+        case MotorID::F3:
+            return "3";
+        case MotorID::Spread:
+            return "4";
+    }
+    return "";
+}
+
 // Ensure the order matches what is expected from RealTime loop
 std::vector<MotorID> getMotorsInGroup(MotorGroup group) {
     switch (group) {
@@ -81,6 +95,7 @@ BarrettHandDriver::~BarrettHandDriver() {
 }
 
 bool BarrettHandDriver::connect(const std::string& port, unsigned int baud_rate) {
+    // TODO: Probably should not print to std::err
     if (isConnected()) {
         std::cerr << "BarrettHandDriver WARNING: Already connected." << std::endl;
         return true;
@@ -196,6 +211,7 @@ void BarrettHandDriver::stopRealtimeControl() {
 
     in_realtime_mode_ = false;
     communicator_->write({0x03}).get();
+    communicator_->read_until("=> ", 1500);
 
     if (realtime_thread_.joinable()) {
         realtime_thread_.join();
@@ -226,9 +242,13 @@ void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
             feedback = parsed_feedback_result.value();
         } else {
             std::cerr << "Parsing Error: " << parsed_feedback_result.error().message() << std::endl;
+            in_realtime_mode_ = false;
+            return;
         }
     } else {
-            std::cerr << "Empty response" << std::endl;
+        std::cerr << "Empty response" << std::endl;
+        in_realtime_mode_ = false;
+        return;
     }
 
     while (in_realtime_mode_ && !stop_threads_) {
@@ -255,7 +275,8 @@ void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
                         );
                     }
                     if (motor_settings.LCT) {
-                        const int16_t torque_command = setpoint.torque_commands.count(motor_id) ? setpoint.torque_commands.at(motor_id) : 0;
+                        const int16_t torque_command =
+                            setpoint.torque_commands.count(motor_id) ? setpoint.torque_commands.at(motor_id) : 0;
                         control_block.push_back(static_cast<uint8_t>(torque_command >> 8));
                         control_block.push_back(static_cast<uint8_t>(torque_command & 0xFF));
                     }
@@ -279,101 +300,109 @@ void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
                 feedback = parsed_feedback_result.value();
             } else {
                 std::cerr << "Parsing Error: " << parsed_feedback_result.error().message() << std::endl;
+                break;
             }
         } else {
-                std::cerr << "Empty response" << std::endl;
+            std::cerr << "Empty response" << std::endl;
+            break;
         }
     }
+    in_realtime_mode_ = false;
 }
 
 std::future<outcome::result<std::string, std::error_code>>
 BarrettHandDriver::sendSynchronousCommand(const std::string& command_str, int timeout_ms, bool is_loop_cmd) {
 
-    return pimpl_->worker.enqueue([this, command_str, timeout_ms, is_loop_cmd]() -> outcome::result<std::string, std::error_code> {
-        if (!communicator_) {
-            return make_error_code(BarrettHandError::NO_COMMUNICATOR);
-        }
-        if (!communicator_->isOpen()) {
-            return make_error_code(BarrettHandError::NO_COMMUNICATOR);
-        }
+    //TODO: make sure it works with Ctrl-C char
+    return pimpl_->worker.enqueue(
+        [this, command_str, timeout_ms, is_loop_cmd]() -> outcome::result<std::string, std::error_code> {
+            if (!communicator_) {
+                return make_error_code(BarrettHandError::NO_COMMUNICATOR);
+            }
+            if (!communicator_->isOpen()) {
+                return make_error_code(BarrettHandError::NO_COMMUNICATOR);
+            }
 
-        std::vector<uint8_t> command_bytes_to_send(command_str.begin(), command_str.end());
-        command_bytes_to_send.push_back('\r');
+            std::vector<uint8_t> command_bytes_to_send(command_str.begin(), command_str.end());
+            command_bytes_to_send.push_back('\r');
 
-        if (!communicator_->write(command_bytes_to_send).get()) {
-            return make_error_code(BarrettHandError::NO_COMMUNICATOR);
-        }
+            if (!communicator_->write(command_bytes_to_send).get()) {
+                return make_error_code(BarrettHandError::NO_COMMUNICATOR);
+            }
 
-        // Read and discard the echo
-        std::vector<uint8_t> echo_bytes = communicator_->read(command_bytes_to_send.size() - 1, timeout_ms).get();
+            // Read and discard the echo
+            std::vector<uint8_t> echo_bytes = communicator_->read(command_bytes_to_send.size() - 1, timeout_ms).get();
 
-        for (const uint8_t byte : echo_bytes) {
-            printByte(byte);
-        }
+            for (const uint8_t byte : echo_bytes) {
+                printByte(byte);
+            }
 
-        bool echo_correct = !echo_bytes.empty() && echo_bytes.size() <= command_bytes_to_send.size()
-                            && std::equal(echo_bytes.begin(), echo_bytes.end(), command_bytes_to_send.begin());
+            bool echo_correct = !echo_bytes.empty() && echo_bytes.size() <= command_bytes_to_send.size()
+                                && std::equal(echo_bytes.begin(), echo_bytes.end(), command_bytes_to_send.begin());
 
-        if (!echo_correct) {
-            std::cerr << "Echo incorrect" << std::endl;
-            return make_error_code(BarrettHandError::COMMAND_TIMEOUT);
-        }
-
-        std::vector<uint8_t> response_bytes;
-        if (is_loop_cmd) {
-            response_bytes = communicator_->read(1, timeout_ms).get();
-
-            if (response_bytes.empty()) {
+            if (!echo_correct) {
+                std::cerr << "Echo incorrect" << std::endl;
                 return make_error_code(BarrettHandError::COMMAND_TIMEOUT);
             }
 
-            if (static_cast<char>(response_bytes[0]) == '*') {
-                return "*";
+            std::vector<uint8_t> response_bytes;
+            if (is_loop_cmd) {
+                response_bytes = communicator_->read(1, timeout_ms).get();
+
+                if (response_bytes.empty()) {
+                    return make_error_code(BarrettHandError::COMMAND_TIMEOUT);
+                }
+
+                if (static_cast<char>(response_bytes[0]) == '*') {
+                    return "*";
+                }
             }
 
-        }
+            // Get actual response
+            std::string end_of_response_marker = "\n\r=> ";
+            std::vector<uint8_t> utill_marker_response_bytes =
+                communicator_->read_until(end_of_response_marker, timeout_ms).get();
 
-        // Get actual response
-        std::string end_of_response_marker = "\n\r=> ";
-        std::vector<uint8_t> utill_marker_response_bytes = communicator_->read_until(end_of_response_marker, timeout_ms).get();
+            response_bytes.insert(
+                response_bytes.end(), utill_marker_response_bytes.begin(), utill_marker_response_bytes.end()
+            );
 
-        response_bytes.insert(response_bytes.end(), utill_marker_response_bytes.begin(), utill_marker_response_bytes.end());
-
-        for (const uint8_t byte : response_bytes) {
-            printByte(byte);
-        }
-        std::string actual_response_buffer(response_bytes.begin(), response_bytes.end());
-        bool response_correct =
-            !actual_response_buffer.empty() && actual_response_buffer.length() >= end_of_response_marker.length()
-            && actual_response_buffer.substr(actual_response_buffer.length() - end_of_response_marker.length())
-                   == end_of_response_marker;
-
-        if (!response_correct) {
-            return make_error_code(BarrettHandError::COMMAND_TIMEOUT);
-        }
-
-        // Check for Barrett Hand error response (e.g., "ERR 123 =>")
-        std::string error_prefix = "\n\rERR ";
-        size_t error_pos = actual_response_buffer.find(error_prefix);
-        if (error_pos != std::string::npos) {
-            try {
-                std::string error_code_str = actual_response_buffer.substr(
-                    error_pos + error_prefix.length(),
-                    actual_response_buffer.length() - error_pos - end_of_response_marker.length()
-                );
-                int error_val = std::stoi(error_code_str);
-                return make_error_code(static_cast<BarrettHandError>(error_val));
-            } catch (const std::exception& e) {
-                std::cerr << "BarrettHandDriver WARNING: Failed to parse Barrett error code: " << e.what()
-                          << ". Response: '" << actual_response_buffer << "'" << std::endl;
-                return make_error_code(BarrettHandError::UNKNOWN_COMMAND);
+            for (const uint8_t byte : response_bytes) {
+                printByte(byte);
             }
-        }
+            std::string actual_response_buffer(response_bytes.begin(), response_bytes.end());
+            bool response_correct =
+                !actual_response_buffer.empty() && actual_response_buffer.length() >= end_of_response_marker.length()
+                && actual_response_buffer.substr(actual_response_buffer.length() - end_of_response_marker.length())
+                       == end_of_response_marker;
 
-        // This is a successful response, remove end of response marker before returning
-        actual_response_buffer.resize(actual_response_buffer.length() - end_of_response_marker.length());
-        return actual_response_buffer;
-    });
+            if (!response_correct) {
+                return make_error_code(BarrettHandError::COMMAND_TIMEOUT);
+            }
+
+            // Check for Barrett Hand error response (e.g., "ERR 123 =>")
+            std::string error_prefix = "\n\rERR ";
+            size_t error_pos = actual_response_buffer.find(error_prefix);
+            if (error_pos != std::string::npos) {
+                try {
+                    std::string error_code_str = actual_response_buffer.substr(
+                        error_pos + error_prefix.length(),
+                        actual_response_buffer.length() - error_pos - end_of_response_marker.length()
+                    );
+                    int error_val = std::stoi(error_code_str);
+                    return make_error_code(static_cast<BarrettHandError>(error_val));
+                } catch (const std::exception& e) {
+                    std::cerr << "BarrettHandDriver WARNING: Failed to parse Barrett error code: " << e.what()
+                              << ". Response: '" << actual_response_buffer << "'" << std::endl;
+                    return make_error_code(BarrettHandError::UNKNOWN_COMMAND);
+                }
+            }
+
+            // This is a successful response, remove end of response marker before returning
+            actual_response_buffer.resize(actual_response_buffer.length() - end_of_response_marker.length());
+            return actual_response_buffer;
+        }
+    );
 }
 
 size_t BarrettHandDriver::calculateFeedbackBlockSize(MotorGroup group) const {
@@ -391,7 +420,6 @@ size_t BarrettHandDriver::calculateFeedbackBlockSize(MotorGroup group) const {
                 size += 2; // Absolute Position (2 bytes)
             }
         }
-
     }
     if (current_rt_settings_.LFT)
         size += 1; // Temperature (1 bytes, global)

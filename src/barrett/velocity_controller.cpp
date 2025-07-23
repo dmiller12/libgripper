@@ -44,9 +44,10 @@ std::array<double, 4> VelocityController::computeControl(
         double error_dt = (error - prev_error_[i]) / dt;
 
         double feedforward = 0;
+        std::array<double, 3> static_friction{0.788, 0.596, 0.958};
         // approx friction compensation
         if ((i < 3) && (std::abs(ref[i]) > 0.0)) {
-            feedforward = 10.0 * sgn(ref[i]);
+            feedforward =  static_friction[i] * sgn(ref[i]);
         }
 
         double accel = feedforward + kp_[i] * error + ki_[i] * integral_error_[i] + kd_[i] * error_dt;

@@ -22,5 +22,10 @@ constexpr double ENCODER_COUNTS_PER_RADIAN_FINGER =
 constexpr double ENCODER_COUNTS_PER_RADIAN_SPREAD =
     (ENCODER_SPREAD_MAX - ENCODER_SPREAD_MIN) / (RADIAN_SPREAD_MAX - RADIAN_SPREAD_MIN);
 
+constexpr double EXTERNAL_CLOCK = 1.25e6;
+constexpr double SAMPLE_TIME = 16 * (32) * (1 / EXTERNAL_CLOCK); // From HCTL-1100 docs
+
+constexpr double TICKS_PER_SECOND = 100.0; // Each tick on embedded CPU is 10ms
+
 } // namespace barrett
 } // namespace gripper
