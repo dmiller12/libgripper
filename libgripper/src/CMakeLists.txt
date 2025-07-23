@@ -1,4 +1,4 @@
-add_library(libgripper
+add_library(gripper
     barrett/barrett_hand.cpp
     barrett/barrett_hand_driver.cpp
     barrett/position_controller.cpp
@@ -8,15 +8,14 @@ add_library(libgripper
 
 find_package(Boost 1.71.0 REQUIRED COMPONENTS system thread)
 
-target_link_libraries(libgripper
-    PUBLIC
+target_link_libraries(gripper
+    PRIVATE
         Boost::system
         Boost::thread
 )
 
-target_include_directories(libgripper
+target_include_directories(gripper
     PUBLIC
-        ../include
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
 )
-
-add_library(gripper::lib ALIAS libgripper)

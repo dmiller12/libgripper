@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>gripper_ros</name>
+  <version>0.1.0</version>
+  <description>The lgripper_ros package provides a ROS interface for the Barrett Hand, acting as a wrapper around the core libgripper library.</description>
+
+  <maintainer email="djm2@ualberta.ca">Dylan Miller</maintainer>
+
+  <license>BSD</license>
+
+  <author email="dylan.miller@example.com">Dylan Miller</author>
+
+  <!-- The build tool we are using is catkin -->
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>gripper</depend>
+
+</package>

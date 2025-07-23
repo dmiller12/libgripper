@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Boost 1.71.0 REQUIRED COMPONENTS system thread)
+
+include("${CMAKE_CURRENT_LIST_DIR}/gripper-targets.cmake")
+

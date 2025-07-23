@@ -4,7 +4,7 @@ add_executable(test_driver
 
 target_link_libraries(test_driver
     PRIVATE
-        libgripper
+        gripper
 )
 
 add_executable(test_bhand
@@ -13,7 +13,7 @@ add_executable(test_bhand
 
 target_link_libraries(test_bhand
     PRIVATE
-        libgripper
+        gripper
 )
 
 add_executable(test_bhand_keyboard
@@ -22,7 +22,7 @@ add_executable(test_bhand_keyboard
 
 target_link_libraries(test_bhand_keyboard
     PRIVATE
-        libgripper
+        gripper
 )
 
 add_executable(static_friction_estimate
@@ -31,7 +31,7 @@ add_executable(static_friction_estimate
 
 target_link_libraries(static_friction_estimate
     PRIVATE
-        libgripper
+        gripper
 )
 
 add_executable(viscous_friction_estimate
@@ -40,5 +40,5 @@ add_executable(viscous_friction_estimate
 
 target_link_libraries(viscous_friction_estimate
     PRIVATE
-        libgripper
+        gripper
 )
