@@ -22,7 +22,7 @@ bool BarrettHand::isInitialized() {
     }
 
     std::stringstream raw_status(status_result.value());
-    std::array<int, 4> status;
+    std::array<int, 4> status{};
 
     // 0 indicates motor is initialized
     if (raw_status >> status[0] >> status[1] >> status[2] >> status[3]) {
@@ -260,14 +260,14 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
 
     auto elapsed_time = now - last_time;
     double dt = std::chrono::duration<double>(elapsed_time).count();
-    double max_dt = 0.1;
-    double min_dt = 0.001;
+    const double max_dt = 0.1;
+    const double min_dt = 0.001;
     dt = std::min(std::max(min_dt, dt), max_dt);
 
-    std::array<double, 4> raw_vel;
+    std::array<double, 4> raw_vel{};
 
     for (const MotorID& m : allMotors) {
-        size_t mIdx = static_cast<size_t>(m);
+        auto mIdx = static_cast<size_t>(m);
         double empirical_vel = (local_state.joint_positions[mIdx] - prev_state_.joint_positions[mIdx]) / dt;
         raw_vel[mIdx] = empirical_vel;
     }
@@ -282,9 +282,9 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
     prev_state_ = local_state;
 
     // Convert desired physical velocity to raw command counts
-    std::array<double, 4> commanded_position_rad;
-    std::array<double, 4> commanded_velocity_rad;
-    bool local_sync_position;
+    std::array<double, 4> commanded_position_rad{};
+    std::array<double, 4> commanded_velocity_rad{};
+    bool local_sync_position = false;
     {
         std::lock_guard<std::mutex> lock(target_mutex_);
         commanded_position_rad = target_position_;
@@ -294,7 +294,7 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
 
     // Create the raw control setpoint for the driver
     RealtimeControlSetpoint setpoint;
-    std::array<double, 4> control_rad;
+    std::array<double, 4> control_rad{};
     switch (control_mode_) {
         case ControlMode::None:
             return boost::none;
@@ -308,7 +308,7 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
             if (local_sync_position) {
                 double position_total = 0;
                 for (const MotorID& m : fingerMotors) {
-                    size_t mIdx = static_cast<size_t>(m);
+                    auto mIdx = static_cast<size_t>(m);
                     position_total += local_state.joint_positions[mIdx];
                 }
                 double position_avg = position_total / fingerMotors.size();
@@ -318,7 +318,7 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
                 );
 
                 for (const MotorID& m : fingerMotors) {
-                    size_t mIdx = static_cast<size_t>(m);
+                    auto mIdx = static_cast<size_t>(m);
                     commanded_velocity_rad[mIdx] += correction[mIdx];
                 }
             }
@@ -328,19 +328,19 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
             );
 
             for (const MotorID& m : fingerMotors) {
-                size_t mIdx = static_cast<size_t>(m);
+                auto mIdx = static_cast<size_t>(m);
                 control_rad[mIdx] = local_state.joint_velocities[mIdx] + accel[mIdx] * dt;
             }
-            size_t spreadIdx = static_cast<size_t>(MotorID::Spread);
+            auto spreadIdx = static_cast<size_t>(MotorID::Spread);
             control_rad[spreadIdx] = accel[spreadIdx];
             break;
     }
 
     for (const auto& m : allMotors) {
         const PerMotorRealtimeSettings& motor_setting = realtime_settings_.motor_settings[m];
-        size_t mIdx = static_cast<size_t>(m);
+        auto mIdx = static_cast<size_t>(m);
         if (m == MotorID::Spread) {
-            int32_t control_count = static_cast<int32_t>(radiansToCounts(control_rad[mIdx], m));
+            auto control_count = static_cast<int16_t>(radiansToCounts(control_rad[mIdx], m));
             setpoint.torque_commands[m] = control_count;
         } else {
 
