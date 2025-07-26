@@ -7,6 +7,7 @@
     output="screen">
 
     <param name="port" value="/dev/ttyUSB0" />
+    <param name="init_prompt" value="true" />
 
   </node>
 
