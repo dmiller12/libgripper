@@ -68,5 +68,5 @@ This is the main bhand node that interfaces with the hardware.
 - `~port` (string, default: `/dev/ttyUSB0`)
     The serial port device name that the BarrettHand is connected to.
 
-- `~init_prompt` (bool, default: `true`)
-    If `true`, the node will print a message on startup and wait for the user to press the Enter key before attempting to initialize the hand. If `false` you must call the `~initialize` service
+- `~init_prompt` (bool, default: `false`)
+    If `true`, the node will print a message on startup and wait for the user to press the Enter key before attempting to initialize the hand. If `false` you must call the `~initialize` service yourself.
