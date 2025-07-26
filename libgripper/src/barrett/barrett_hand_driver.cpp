@@ -129,6 +129,7 @@ void BarrettHandDriver::disconnect() {
     mode_ = OperatingMode::Disconnected;
 }
 
+// TODO: Should this be internal mode or status of communicator?
 bool BarrettHandDriver::isConnected() const {
     return communicator_ && communicator_->isOpen();
 }
