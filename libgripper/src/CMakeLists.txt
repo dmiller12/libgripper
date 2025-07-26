@@ -1,4 +1,4 @@
-add_library(gripper
+add_library(gripper SHARED
     barrett/barrett_hand.cpp
     barrett/barrett_hand_driver.cpp
     barrett/position_controller.cpp

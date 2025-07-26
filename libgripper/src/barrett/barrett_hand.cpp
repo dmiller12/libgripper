@@ -14,7 +14,7 @@ BarrettHand::~BarrettHand() {
     shutdown();
 }
 
-bool BarrettHand::isInitialized() {
+bool BarrettHand::isDeviceInitialized() {
     auto status_result = driver_->sendSupervisoryCommand("1234FGET S").get();
 
     if (!status_result) {
@@ -27,7 +27,6 @@ bool BarrettHand::isInitialized() {
     // 0 indicates motor is initialized
     if (raw_status >> status[0] >> status[1] >> status[2] >> status[3]) {
         for (const int& s : status) {
-            std::cout << s << std::endl;
             if (s != 0) {
                 return false;
             }
@@ -43,10 +42,7 @@ bool BarrettHand::initialize(const std::string& port, bool force) {
         return false;
     }
 
-    // Ctrl-C
-    // driver_->sendSupervisoryCommand({0x03});
-
-    if (force || !isInitialized()) {
+    if (force || !isDeviceInitialized()) {
 
         auto initilize_result = driver_->sendSupervisoryCommand("HI").get();
 
@@ -93,6 +89,7 @@ bool BarrettHand::initialize(const std::string& port, bool force) {
 }
 
 void BarrettHand::shutdown() {
+    // TODO: Let RAII handle this ??
     if (driver_ && driver_->isConnected()) {
         driver_->stopRealtimeControl();
         driver_->disconnect();
@@ -112,6 +109,7 @@ bool BarrettHand::startRealtimeControl() {
     return true;
 }
 
+// TODO: Check if initialized first?
 void BarrettHand::setPosition(const std::array<double, 4>& positions) {
     std::lock_guard<std::mutex> lock(target_mutex_);
     target_position_ = positions;
@@ -351,7 +349,8 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
         }
     }
 
-    printState(local_state);
+    // TODO: add debug mode?
+    // printState(local_state);
     return setpoint;
 }
 

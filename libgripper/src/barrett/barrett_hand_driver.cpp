@@ -71,7 +71,7 @@ void printByte(uint8_t byte) {
 }
 
 struct BarrettHandDriver::Impl {
-    TaskWorker worker;
+    std::unique_ptr<TaskWorker> worker;
 };
 
 BarrettHandDriver::BarrettHandDriver()
@@ -79,40 +79,29 @@ BarrettHandDriver::BarrettHandDriver()
 }
 
 BarrettHandDriver::~BarrettHandDriver() {
-    stop_threads_ = true; // Signal all threads to exit their loops
-
-    if (in_realtime_mode_.load() && communicator_) {
-        communicator_->write({0x03}).get(); // Ctrl-C
-    }
-
-    if (realtime_thread_.joinable()) {
-        realtime_thread_.join();
-    }
-
-    if (isConnected()) {
-        disconnect();
-    }
+    disconnect();
 }
 
 bool BarrettHandDriver::connect(const std::string& port, unsigned int baud_rate) {
-    // TODO: Probably should not print to std::err
     if (isConnected()) {
-        std::cerr << "BarrettHandDriver WARNING: Already connected." << std::endl;
         return true;
     }
 
     communicator_ = std::make_unique<SerialCommunicator>();
     if (!communicator_->connect(port, baud_rate)) {
-        std::cerr << "BarrettHandDriver ERROR: Failed to connect to serial port " << port << std::endl;
         communicator_.reset();
+        mode_ = OperatingMode::Disconnected;
         return false;
     }
 
-    is_connected_ = true;
-    stop_threads_ = false;
+    pimpl_->worker = std::make_unique<TaskWorker>();
 
-    // sendSynchronousCommand("RESET", 2000);
-    std::cout << "BarrettHandDriver: Connected and reset." << std::endl;
+    stop_threads_ = false;
+    mode_ = OperatingMode::Supervisory;
+
+    // clear previous errors and buffer
+    communicator_->write({0x03}).get();
+    communicator_->read_until("=> ", 1500).get();
 
     return true;
 }
@@ -123,28 +112,40 @@ void BarrettHandDriver::disconnect() {
 
     stop_threads_ = true;
 
-    communicator_->disconnect();
-    is_connected_ = false;
-    std::cout << "BarrettHandDriver: Disconnected." << std::endl;
+    if (realtime_thread_.joinable()) {
+        realtime_thread_.join();
+    }
+
+    if (pimpl_->worker) {
+        pimpl_->worker.reset();
+    }
+
+
+    if (communicator_) {
+        // Cancel last request
+        communicator_->write({0x03}).get();
+        communicator_.reset();
+    }
+    mode_ = OperatingMode::Disconnected;
 }
 
 bool BarrettHandDriver::isConnected() const {
-    return is_connected_ && communicator_ && communicator_->isOpen();
+    return communicator_ && communicator_->isOpen();
 }
 
 bool BarrettHandDriver::isInRealtimeControl() const {
-    return in_realtime_mode_;
+    return mode_ == OperatingMode::RealTime;
 }
 
 std::future<outcome::result<std::string, std::error_code>>
 BarrettHandDriver::sendSupervisoryCommand(const std::string& command) {
     if (isInRealtimeControl()) {
         auto promise = std::promise<outcome::result<std::string, std::error_code>>();
-        promise.set_value(make_error_code(BarrettHandError::REALTIME_CONTROL_ACTIVE));
         auto future = promise.get_future();
+        promise.set_value(make_error_code(BarrettHandError::REALTIME_CONTROL_ACTIVE));
         return future;
     }
-    return sendSynchronousCommand(command, 15000);
+    return sendAsynchronousCommand(command, 15000);
 }
 
 outcome::result<void, std::error_code> BarrettHandDriver::configureRealtime(const RealtimeSettings& settings) {
@@ -186,44 +187,39 @@ BarrettHandDriver::startRealtimeControl(RealtimeCallback callback, MotorGroup gr
         return make_error_code(BarrettHandError::NO_COMMUNICATOR);
     }
 
-    if (isInRealtimeControl()) {
+    if (mode_ == OperatingMode::RealTime) {
         return make_error_code(BarrettHandError::REALTIME_CONTROL_ACTIVE);
     }
 
     realtime_callback_ = std::move(callback);
 
     std::string loop_cmd = motorGroupToPrefix(group) + "LOOP";
-    BOOST_OUTCOME_TRY(response, sendSynchronousCommand(loop_cmd, 500, true).get());
+    BOOST_OUTCOME_TRY(response, sendAsynchronousCommand(loop_cmd, 500, true).get());
 
     if (response.find('*') == std::string::npos) {
         return make_error_code(BarrettHandError::NO_LOOP_ACK);
     }
 
-    in_realtime_mode_ = true;
+    mode_ = OperatingMode::RealTime;
     realtime_thread_ = std::thread(&BarrettHandDriver::realtimeControlLoop, this, group);
-    std::cout << "BarrettHandDriver: Entered Real-Time mode." << std::endl;
     return outcome::success();
 }
 
 void BarrettHandDriver::stopRealtimeControl() {
-    if (!isInRealtimeControl())
+    OperatingMode expected = OperatingMode::RealTime;
+    if (!mode_.compare_exchange_strong(expected, OperatingMode::Supervisory))
         return;
-
-    in_realtime_mode_ = false;
-    communicator_->write({0x03}).get();
-    communicator_->read_until("=> ", 1500);
 
     if (realtime_thread_.joinable()) {
         realtime_thread_.join();
     }
-    std::cout << "BarrettHandDriver: Exited Real-Time mode." << std::endl;
+
+    // Cancel realtime and wait for prompt
+    communicator_->write({0x03}).get();
+    communicator_->read_until("=> ", 1500).get();
 }
 
-// --- Private Thread Loops and Helper Methods ---
-
 void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
-    // TODO: set in_realtime_mode_ to false if exiting loop. Also add other exit conditions on failure.
-    RealtimeFeedback feedback;
     size_t feedback_size = calculateFeedbackBlockSize(group);
 
     std::vector<uint8_t> control_block;
@@ -231,27 +227,25 @@ void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
 
     if (!communicator_->write(control_block).get()) {
         std::cerr << "BarrettHandDriver RT ERROR: Write failed." << std::endl;
+        return;
     }
 
     std::vector<uint8_t> feedback_block = communicator_->read(feedback_size, 100).get();
 
-    if (!feedback_block.empty()) {
-        auto parsed_feedback_result = parseFeedbackBlock(feedback_block, group);
-
-        if (parsed_feedback_result) {
-            feedback = parsed_feedback_result.value();
-        } else {
-            std::cerr << "Parsing Error: " << parsed_feedback_result.error().message() << std::endl;
-            in_realtime_mode_ = false;
-            return;
-        }
-    } else {
+    if (feedback_block.empty()) {
         std::cerr << "Empty response" << std::endl;
-        in_realtime_mode_ = false;
+        return;
+    }
+    auto parsed_feedback_result = parseFeedbackBlock(feedback_block, group);
+
+    if (!parsed_feedback_result) {
+        std::cerr << "Parsing Error: " << parsed_feedback_result.error().message() << std::endl;
         return;
     }
 
-    while (in_realtime_mode_ && !stop_threads_) {
+    RealtimeFeedback feedback = parsed_feedback_result.value();
+
+    while (mode_ == OperatingMode::RealTime && !stop_threads_) {
         auto maybe_setpoint = realtime_callback_(feedback);
 
         std::vector<uint8_t> control_block;
@@ -288,33 +282,38 @@ void BarrettHandDriver::realtimeControlLoop(MotorGroup group) {
 
         if (!communicator_->write(control_block).get()) {
             std::cerr << "BarrettHandDriver RT ERROR: Write failed." << std::endl;
-            break;
+            return;
         }
 
+        // TODO: More consistent timing
         std::vector<uint8_t> feedback_block = communicator_->read(feedback_size, 100).get();
-
-        if (!feedback_block.empty()) {
-            auto parsed_feedback_result = parseFeedbackBlock(feedback_block, group);
-
-            if (parsed_feedback_result) {
-                feedback = parsed_feedback_result.value();
-            } else {
-                std::cerr << "Parsing Error: " << parsed_feedback_result.error().message() << std::endl;
-                break;
-            }
-        } else {
+        if (feedback_block.empty()) {
             std::cerr << "Empty response" << std::endl;
-            break;
+            return;
         }
+
+        auto parsed_feedback_result = parseFeedbackBlock(feedback_block, group);
+
+        if (!parsed_feedback_result) {
+            std::cerr << "Parsing Error: " << parsed_feedback_result.error().message() << std::endl;
+            return;
+        } 
+
+        feedback = parsed_feedback_result.value();
     }
-    in_realtime_mode_ = false;
 }
 
 std::future<outcome::result<std::string, std::error_code>>
-BarrettHandDriver::sendSynchronousCommand(const std::string& command_str, int timeout_ms, bool is_loop_cmd) {
+BarrettHandDriver::sendAsynchronousCommand(const std::string& command_str, int timeout_ms, bool is_loop_cmd) {
 
-    //TODO: make sure it works with Ctrl-C char
-    return pimpl_->worker.enqueue(
+    if (!pimpl_->worker) {
+        std::promise<outcome::result<std::string, std::error_code>> promise;
+        //TODO: Need different error code here
+        promise.set_value(make_error_code(BarrettHandError::NO_COMMUNICATOR));
+        return promise.get_future();
+    }
+
+    return pimpl_->worker->enqueue(
         [this, command_str, timeout_ms, is_loop_cmd]() -> outcome::result<std::string, std::error_code> {
             if (!communicator_) {
                 return make_error_code(BarrettHandError::NO_COMMUNICATOR);
@@ -333,9 +332,10 @@ BarrettHandDriver::sendSynchronousCommand(const std::string& command_str, int ti
             // Read and discard the echo
             std::vector<uint8_t> echo_bytes = communicator_->read(command_bytes_to_send.size() - 1, timeout_ms).get();
 
-            for (const uint8_t byte : echo_bytes) {
-                printByte(byte);
-            }
+            //TODO: add debug mode?
+            // for (const uint8_t byte : echo_bytes) {
+            //     printByte(byte);
+            // }
 
             bool echo_correct = !echo_bytes.empty() && echo_bytes.size() <= command_bytes_to_send.size()
                                 && std::equal(echo_bytes.begin(), echo_bytes.end(), command_bytes_to_send.begin());
@@ -367,9 +367,10 @@ BarrettHandDriver::sendSynchronousCommand(const std::string& command_str, int ti
                 response_bytes.end(), utill_marker_response_bytes.begin(), utill_marker_response_bytes.end()
             );
 
-            for (const uint8_t byte : response_bytes) {
-                printByte(byte);
-            }
+            //TODO: add debug mode?
+            // for (const uint8_t byte : response_bytes) {
+            //     printByte(byte);
+            // }
             std::string actual_response_buffer(response_bytes.begin(), response_bytes.end());
             bool response_correct =
                 !actual_response_buffer.empty() && actual_response_buffer.length() >= end_of_response_marker.length()
@@ -459,7 +460,7 @@ BarrettHandDriver::parseFeedbackBlock(const std::vector<uint8_t>& block, MotorGr
             if (motor_setting.LFAP) {
                 if (ptr + 2 > block.data() + block.size())
                     return make_error_code(BarrettHandError::PARSING_ERROR);
-                uint16_t pos = static_cast<uint16_t>((ptr[0] << 8) | ptr[1]);
+                auto pos = static_cast<uint16_t>((ptr[0] << 8) | ptr[1]);
                 feedback.positions[motor_id] = pos;
                 ptr += 2;
             }
@@ -468,7 +469,7 @@ BarrettHandDriver::parseFeedbackBlock(const std::vector<uint8_t>& block, MotorGr
     if (current_rt_settings_.LFT) {
         if (ptr + 1 > block.data() + block.size())
             return make_error_code(BarrettHandError::PARSING_ERROR);
-        int8_t temp = static_cast<int8_t>(*ptr);
+        auto temp = static_cast<int8_t>(*ptr);
         feedback.temperature_c = temp;
         ptr += 1;
     }

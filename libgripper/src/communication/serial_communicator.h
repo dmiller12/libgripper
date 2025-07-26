@@ -9,7 +9,6 @@
 #include <vector>
 #include <cstdint>
 #include <thread>
-#include <atomic>
 #include <future>
 
 class SerialCommunicator {
@@ -36,5 +35,4 @@ private:
     boost::asio::steady_timer timer_;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard_;
     std::thread io_thread_;
-    std::atomic<bool> is_open_{false};
 };

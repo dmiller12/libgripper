@@ -46,7 +46,7 @@ class BarrettHand {
   private:
     boost::optional<RealtimeControlSetpoint> controlLoopCallback(const RealtimeFeedback& feedback);
     bool startRealtimeControl();
-    bool isInitialized();
+    bool isDeviceInitialized();
 
     std::unique_ptr<BarrettHandDriver> driver_;
     std::array<double, 4> target_position_{};

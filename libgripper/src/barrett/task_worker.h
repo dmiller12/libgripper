@@ -22,6 +22,9 @@ public:
     TaskWorker(const TaskWorker&) = delete;
     TaskWorker& operator=(const TaskWorker&) = delete;
 
+    void stop();
+
+
 private:
     void run();
 
@@ -33,11 +36,21 @@ private:
     std::atomic<bool> stop_;
 };
 
-inline TaskWorker::TaskWorker() : stop_(false) {
+TaskWorker::TaskWorker() : stop_(false) {
+
     worker_thread_ = std::thread(&TaskWorker::run, this);
 }
 
-inline TaskWorker::~TaskWorker() {
+TaskWorker::~TaskWorker() {
+    stop();
+}
+
+void TaskWorker::stop() {
+
+    if (stop_.exchange(true)) {
+        return;
+    }
+
     {
         std::unique_lock<std::mutex> lock(queue_mutex_);
         stop_ = true;
@@ -47,7 +60,9 @@ inline TaskWorker::~TaskWorker() {
     if (worker_thread_.joinable()) {
         worker_thread_.join();
     }
+
 }
+
 
 template <class F, class... Args>
 auto TaskWorker::enqueue(F&& f, Args&&... args)

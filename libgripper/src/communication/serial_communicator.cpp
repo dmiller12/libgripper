@@ -1,6 +1,5 @@
 #include "serial_communicator.h"
 
-// --- Boost.Asio Headers for implementation ---
 #include <boost/asio/post.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/read_until.hpp>
@@ -8,7 +7,6 @@
 #include <boost/asio/write.hpp>
 #include <boost/system/error_code.hpp>
 
-// --- Standard Library Headers ---
 #include <iostream>
 
 SerialCommunicator::SerialCommunicator()
@@ -30,6 +28,7 @@ SerialCommunicator::~SerialCommunicator() {
     }
 }
 
+//TODO: should this return an outcome as well?
 bool SerialCommunicator::connect(const std::string& port_name, unsigned int baud_rate) {
     std::promise<bool> promise;
     auto future = promise.get_future();
@@ -60,8 +59,7 @@ bool SerialCommunicator::connect(const std::string& port_name, unsigned int baud
         }
         promise.set_value(true);
     });
-    is_open_ = future.get();
-    return is_open_;
+    return future.get();
 }
 
 void SerialCommunicator::disconnect() {
@@ -72,27 +70,26 @@ void SerialCommunicator::disconnect() {
             port_.close();
         }
     });
-    is_open_ = false;
 }
 
 bool SerialCommunicator::isOpen() const {
-    return is_open_ && port_.is_open();
+    return port_.is_open();
 }
 
 std::future<bool> SerialCommunicator::write(const std::vector<uint8_t>& data) {
-    auto promise = std::make_shared<std::promise<bool>>();
-    auto future = promise->get_future();
+    std::promise<bool> promise;
+    auto future = promise.get_future();
 
     if (!isOpen()) {
-        promise->set_value(false);
+        promise.set_value(false);
         return future;
     }
 
-    boost::asio::post(io_context_, [&, data, promise]() {
+    boost::asio::post(io_context_, [&, data, promise = std::move(promise)]() mutable {
         boost::system::error_code ec;
         boost::asio::write(port_, boost::asio::buffer(data), ec);
         try {
-            promise->set_value(!ec);
+            promise.set_value(!ec);
             if (ec) {
                 std::cerr << "[Serial] Write error: " << ec.message() << std::endl;
             }
@@ -155,6 +152,7 @@ std::future<std::vector<uint8_t>> SerialCommunicator::read_until(std::string del
     auto future = promise->get_future();
 
     if (!isOpen() || delim.length() == 0) {
+
         promise->set_value({});
         return future;
     }

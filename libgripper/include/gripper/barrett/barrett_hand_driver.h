@@ -7,7 +7,6 @@
 #include <future>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -51,13 +50,13 @@ struct RealtimeSettings {
     bool LFT = false; // Loop Feedback Temperature
 };
 
-
 std::string motorGroupToPrefix(MotorGroup group);
 
 std::string motorIDToPrefix(MotorID id);
 
 std::vector<MotorID> getMotorsInGroup(MotorGroup group);
 
+enum class OperatingMode { Disconnected, Supervisory, RealTime };
 
 /**
  * @class BarrettHandDriver
@@ -85,19 +84,16 @@ class BarrettHandDriver {
     void stopRealtimeControl();
 
   private:
+    std::atomic<OperatingMode> mode_{OperatingMode::Disconnected};
     void realtimeControlLoop(MotorGroup group);
     std::future<outcome::result<std::string, std::error_code>>
-    sendSynchronousCommand(const std::string& command_str, int timeout_ms, bool is_loop_cmd = false);
+    sendAsynchronousCommand(const std::string& command_str, int timeout_ms, bool is_loop_cmd = false);
     outcome::result<RealtimeFeedback, std::error_code>
     parseFeedbackBlock(const std::vector<uint8_t>& block, MotorGroup group) const;
     size_t calculateFeedbackBlockSize(MotorGroup group) const;
 
     std::unique_ptr<SerialCommunicator> communicator_;
-    std::atomic<bool> is_connected_{false};
-    std::atomic<bool> in_realtime_mode_{false};
     std::atomic<bool> stop_threads_{false};
-
-    std::mutex supervisory_mutex_;
 
     std::thread realtime_thread_;
     RealtimeCallback realtime_callback_;
