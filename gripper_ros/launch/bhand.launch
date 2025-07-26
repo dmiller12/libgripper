@@ -1,0 +1,14 @@
+<launch>
+
+  <node
+    pkg="gripper_ros"
+    type="bhand_node"
+    name="bhand_node"
+    output="screen">
+
+    <param name="port" value="/dev/ttyUSB0" />
+
+  </node>
+
+</launch>
+
