@@ -8,7 +8,7 @@
 
   <license>BSD</license>
 
-  <author email="dylan.miller@example.com">Dylan Miller</author>
+  <author email="djm2@ualberta.ca">Dylan Miller</author>
 
   <!-- The build tool we are using is catkin -->
   <buildtool_depend>catkin</buildtool_depend>
