@@ -25,8 +25,10 @@ You can now build the ros node as usual
 cd <your-catkin-ws>
 catkin_make
 ```
+See [gripper_ros readme](gipper_ros/README.md) for instructions on using the BHand with ROS.
 # Core Library
 The library exposes two classes to interact with the hand `gripper::barrett::BarrettHand` and `gripper::barrett::BarrettHandDriver`.
+
 
 `gripper::barrett::BarrettHand` provides a high level interface for the hand and should be the class used in almost all cases. The BarrettHandDriver class is responsible for the lower level communication and parsing.
 
