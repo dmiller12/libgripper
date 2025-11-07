@@ -2,7 +2,7 @@
 <package format="2">
   <name>gripper_ros</name>
   <version>0.1.0</version>
-  <description>The gripper package provides a ROS interface for the Barrett Hand, acting as a wrapper around the core libgripper library.</description>
+  <description>The gripper package provides ROS interfaces for the Barrett Hand and Robotiq 2F grippers, acting as a wrapper around the core libgripper library.</description>
 
   <maintainer email="djm2@ualberta.ca">Dylan Miller</maintainer>
 

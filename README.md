@@ -1,5 +1,5 @@
 
-This repo includes the core library `libgripper/` and a simple ros package `gripper_ros/` that wraps the behavior of the core library.
+This repo includes the core library `libgripper/` and ROS packages that expose both the BarrettHand BH8-series and Robotiq 2F grippers to ROS.
 # ROS instructions
 
 First build the core library and set the install location to your caktin workspace
@@ -11,7 +11,7 @@ make
 make install
 ```
 
-There are two ros packages, `gipper_ros` which includes the bhand_node, and `gripper_ros_common` which includes messages and services.
+There are two ros packages, `gripper_ros` which includes nodes for the BarrettHand and Robotiq grippers, and `gripper_ros_common` which includes messages and services.
 Create symbolic links in your catkin workspace src pointing to gripper_ros and gripper_ros_common.
 ```bash
 cd <your-catkin-ws>/src
@@ -25,12 +25,12 @@ You can now build the ros node as usual
 cd <your-catkin-ws>
 catkin_make
 ```
-See [gripper_ros readme](gripper_ros/README.md) for instructions on using the BHand with ROS.
+See [gripper_ros readme](gripper_ros/README.md) for instructions on using the hardware drivers with ROS.
 # Core Library
-The library exposes two classes to interact with the hand `gripper::barrett::BarrettHand` and `gripper::barrett::BarrettHandDriver`.
+The library exposes classes to interact with both devices: `gripper::barrett::BarrettHand` / `gripper::barrett::BarrettHandDriver` for the Barrett hand and `gripper::robotiq::RobotiqGripper` for the Robotiq 2F gripper.
 
 
-`gripper::barrett::BarrettHand` provides a high level interface for the hand and should be the class used in almost all cases. The BarrettHandDriver class is responsible for the lower level communication and parsing.
+`gripper::barrett::BarrettHand` provides a high level interface for the hand and should be the class used in almost all cases. The `RobotiqGripper` exposes a similarly high level API (activate, setWidth, open/close) built on top of a Modbus RTU client.
 
 The Barrett Hand 262 exposes two modes, supervisory and real-time. Supervisory mode blocks until a command is complete. For example, when initializing the hand, another command cannot be sent until the entire sequence is complete. During this time you cannot query the devices for state information (such a joint position and velocity). 
 The real-time mode is used to provide reference values to lower level controllers on the device. The commands can be specified to return state information in a non-blocking fashion. For that reason the BarrettHand is designed to be in real-time mode by default, continually querying the device for the current position. 

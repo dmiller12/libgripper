@@ -4,6 +4,8 @@ add_library(gripper SHARED
     barrett/position_controller.cpp
     barrett/velocity_controller.cpp
     communication/serial_communicator.cpp
+    robotiq/modbus_client.cpp
+    robotiq/robotiq_gripper.cpp
 )
 
 find_package(Boost 1.71.0 REQUIRED COMPONENTS system thread)
