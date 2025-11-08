@@ -1,4 +1,4 @@
-#include "serial_communicator.h"
+#include "gripper/communication/serial_communicator.h"
 
 #include <boost/asio/post.hpp>
 #include <boost/asio/read.hpp>

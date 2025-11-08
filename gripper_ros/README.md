@@ -2,7 +2,7 @@
 
 ## Summary
 
-This ROS package provides a ROS interface for the BarrettHand BH8-series gripper. It exposes topics for controlling the gripper's position and velocity, publishes the gripper's state, and offers services for common actions like initialization and opening/closing the grasp.
+This ROS package provides a ROS interface for the BarrettHand BH8-series gripper and the Robotiq 2F-140 gripper. It exposes topics for controlling the grippers' position and velocity, publishes joint states, and offers services for common actions like initialization and opening/closing the grasp.
 
 ## Dependencies
 
@@ -26,6 +26,12 @@ The recommended way to run the node is with the provided launch file. This allow
 
 ```bash
 roslaunch gripper_ros bhand.launch 
+```
+
+To run the Robotiq node (Modbus RTU over serial):
+
+```bash
+roslaunch gripper_ros robotiq.launch
 ```
 
 
@@ -70,3 +76,45 @@ This is the main bhand node that interfaces with the hardware.
 
 - `~init_prompt` (bool, default: `false`)
     If `true`, the node will print a message on startup and wait for the user to press the Enter key before attempting to initialize the hand. If `false` you must call the `~initialize` service yourself.
+
+## `robotiq_node`
+
+ROS interface for the Robotiq 2F-140 gripper. The node drives the gripper over a serial Modbus RTU connection using the new `gripper::robotiq::RobotiqGripper` backend.
+
+### Published Topics
+
+- `~joint_states` (`sensor_msgs/JointState`)
+    Publishes two virtual finger joints representing the current finger spacing (mirrored about the palm center). Effort is populated with the gripper's supply current estimate.
+
+### Subscribed Topics
+
+- `~position_setpoint` (`gripper_ros_common/PositionSetpoint`)
+    The `grasp` field represents the desired jaw width in meters (`0.0` closed, `0.14` fully open). The `spread` field is ignored.
+
+- `~velocity_setpoint` (`gripper_ros_common/VelocitySetpoint`)
+    Uses the absolute value of `grasp` as the normalized speed ratio (`0.0–1.0`) for upcoming motions. `spread` is ignored.
+
+### Services
+
+- `~initialize` (`std_srvs/Empty`)
+    Opens the serial port, pushes the configured speed/force ratios, and activates the Robotiq gripper.
+
+- `~open_grasp` / `~close_grasp` (`std_srvs/Empty`)
+    Convenience services for fully opening/closing the gripper.
+
+### Parameters
+
+- `~port` (string, default: `/dev/ttyUSB0`)
+    Serial device used for Modbus RTU.
+
+- `~baud_rate` (int, default: `115200`)
+    Serial baud rate.
+
+- `~default_speed_ratio` (double, default: `0.4`)
+    Normalized speed (0–1) that is pushed during initialization.
+
+- `~default_force_ratio` (double, default: `0.5`)
+    Normalized force (0–1) used for every command.
+
+- `~auto_initialize` (bool, default: `false`)
+    Automatically calls the initialize service on startup when true.

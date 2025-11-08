@@ -1,0 +1,17 @@
+<launch>
+
+  <node
+    pkg="gripper_ros"
+    type="robotiq_node"
+    name="robotiq_gripper"
+    output="screen">
+
+    <param name="port" value="/dev/ttyUSB0" />
+    <param name="baud_rate" value="115200" />
+    <param name="auto_initialize" value="true" />
+    <param name="default_speed_ratio" value="0.5" />
+    <param name="default_force_ratio" value="0.5" />
+
+  </node>
+
+</launch>

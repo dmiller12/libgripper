@@ -29,6 +29,8 @@ See [gripper_ros readme](gripper_ros/README.md) for instructions on using the BH
 # Core Library
 The library exposes two classes to interact with the hand `gripper::barrett::BarrettHand` and `gripper::barrett::BarrettHandDriver`.
 
+It also includes a Modbus RTU driver for the Robotiq 2F-140 (`gripper::robotiq::RobotiqGripper`) that mirrors the same ROS messaging conventions so you can swap hardware with minimal changes.
+
 
 `gripper::barrett::BarrettHand` provides a high level interface for the hand and should be the class used in almost all cases. The BarrettHandDriver class is responsible for the lower level communication and parsing.
 

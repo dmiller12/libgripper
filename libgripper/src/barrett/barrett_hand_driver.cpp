@@ -1,5 +1,5 @@
 #include "gripper/barrett/barrett_hand_driver.h"
-#include "../communication/serial_communicator.h"
+#include "gripper/communication/serial_communicator.h"
 #include "gripper/barrett/barrett_error.h"
 #include "task_worker.h"
 
@@ -195,7 +195,7 @@ BarrettHandDriver::startRealtimeControl(RealtimeCallback callback, MotorGroup gr
     realtime_callback_ = std::move(callback);
 
     std::string loop_cmd = motorGroupToPrefix(group) + "LOOP";
-    BOOST_OUTCOME_TRY(response, sendAsynchronousCommand(loop_cmd, 500, true).get());
+    BOOST_OUTCOME_TRY(auto response, sendAsynchronousCommand(loop_cmd, 500, true).get());
 
     if (response.find('*') == std::string::npos) {
         return make_error_code(BarrettHandError::NO_LOOP_ACK);

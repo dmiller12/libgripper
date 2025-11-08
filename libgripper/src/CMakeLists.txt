@@ -3,6 +3,7 @@ add_library(gripper SHARED
     barrett/barrett_hand_driver.cpp
     barrett/position_controller.cpp
     barrett/velocity_controller.cpp
+    robotiq/robotiq_gripper.cpp
     communication/serial_communicator.cpp
 )
 
