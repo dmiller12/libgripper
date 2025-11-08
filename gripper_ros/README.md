@@ -92,7 +92,7 @@ ROS interface for the Robotiq 2F-140 gripper. The node drives the gripper over a
     The `grasp` field represents the desired jaw width in meters (`0.0` closed, `0.14` fully open). The `spread` field is ignored.
 
 - `~velocity_setpoint` (`gripper_ros_common/VelocitySetpoint`)
-    Uses the absolute value of `grasp` as the normalized speed ratio (`0.0–1.0`) for upcoming motions. `spread` is ignored.
+    The signed command is integrated directly into jaw-width targets so velocity-only joystick pipelines (e.g., Barrett teleop) can move the gripper without modification. By default the `grasp` channel is used (positive closes, negative opens) but the node can optionally consume `spread` instead.
 
 ### Services
 
@@ -115,6 +115,21 @@ ROS interface for the Robotiq 2F-140 gripper. The node drives the gripper over a
 
 - `~default_force_ratio` (double, default: `0.5`)
     Normalized force (0–1) used for every command.
+
+- `~velocity_gain` (double, default: `0.04`)
+    Linear speed (meters/second) that corresponds to a unit-magnitude velocity command. Increase to make joystick control snappier.
+
+- `~velocity_use_spread` (bool, default: `false`)
+    Use the `spread` field of `VelocitySetpoint` instead of `grasp` when integrating velocity commands.
+
+- `~invert_velocity_direction` (bool, default: `false`)
+    Flip the sign of incoming velocity commands (useful if your controller axis feels backwards).
+
+- `~min_width` / `~max_width` (double, defaults: `0.0` and gripper stroke)
+    Clamp bounds for the integrated jaw width.
+
+- `~initial_width` (double, default: `~max_width`)
+    Starting width used before any state feedback is received.
 
 - `~invert_service_direction` (bool, default: `false`)
     When `true`, swaps the behavior of `~open_grasp` and `~close_grasp` to accommodate installations where the wiring feels reversed.

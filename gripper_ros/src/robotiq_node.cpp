@@ -23,6 +23,17 @@ class RobotiqNode {
         nh_.param<double>("default_force_ratio", default_force_ratio_, 0.5);
         nh_.param<bool>("auto_initialize", auto_initialize_, false);
         nh_.param<bool>("invert_service_direction", invert_service_direction_, false);
+        nh_.param<double>("velocity_gain", velocity_gain_mps_, 0.04);
+        nh_.param<bool>("velocity_use_spread", velocity_use_spread_field_, false);
+        nh_.param<bool>("invert_velocity_direction", invert_velocity_direction_, false);
+        nh_.param<double>("min_width", min_width_, 0.0);
+        double max_width_param = gripper_.maxStrokeMeters();
+        nh_.param<double>("max_width", max_width_param, gripper_.maxStrokeMeters());
+        nh_.param<double>("initial_width", commanded_width_, max_width_param);
+
+        min_width_ = std::max(0.0, min_width_);
+        max_width_ = std::max(min_width_, max_width_param);
+        commanded_width_ = clampWidth(commanded_width_);
 
         joint_state_pub_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
         position_setpoint_sub_ = nh_.subscribe("position_setpoint", 1, &RobotiqNode::positionSetpointCb, this);
@@ -65,6 +76,11 @@ class RobotiqNode {
         msg.effort = {current_amps, current_amps};
 
         joint_state_pub_.publish(msg);
+
+        if (!commanded_width_initialized_) {
+            commanded_width_ = clampWidth(state.actual_width_m);
+            commanded_width_initialized_ = true;
+        }
     }
 
   private:
@@ -132,21 +148,64 @@ class RobotiqNode {
             return;
         }
         double width = msg->grasp;
-        width = std::max(0.0, std::min(width, gripper_.maxStrokeMeters()));
+        width = clampWidth(width);
         if (!gripper_.setWidth(width)) {
             ROS_WARN_THROTTLE(2.0, "Failed to send Robotiq width command");
         }
+        commanded_width_ = width;
+        commanded_width_initialized_ = true;
+        last_velocity_command_time_ = ros::Time::now();
     }
 
     void velocitySetpointCb(const gripper_ros_common::VelocitySetpointConstPtr& msg) {
         if (!ensureReady()) {
             return;
         }
-        double ratio = std::fabs(msg->grasp);
-        ratio = std::max(0.0, std::min(ratio, 1.0));
+        double command = velocity_use_spread_field_ ? msg->spread : msg->grasp;
+        if (invert_velocity_direction_) {
+            command = -command;
+        }
+
+        if (!std::isfinite(command)) {
+            return;
+        }
+
+        double ratio = std::max(0.0, std::min(std::fabs(command), 1.0));
         if (!gripper_.setSpeedRatio(ratio)) {
             ROS_WARN_THROTTLE(2.0, "Failed to update Robotiq speed ratio");
         }
+
+        if (!commanded_width_initialized_) {
+            RobotiqState state;
+            if (gripper_.readState(state)) {
+                commanded_width_ = clampWidth(state.actual_width_m);
+            }
+            commanded_width_initialized_ = true;
+        }
+
+        ros::Time now = ros::Time::now();
+        if (last_velocity_command_time_.isZero()) {
+            last_velocity_command_time_ = now;
+            return;
+        }
+
+        double dt = (now - last_velocity_command_time_).toSec();
+        last_velocity_command_time_ = now;
+
+        if (dt <= 0.0) {
+            return;
+        }
+
+        commanded_width_ -= command * velocity_gain_mps_ * dt;
+        commanded_width_ = clampWidth(commanded_width_);
+
+        if (!gripper_.setWidth(commanded_width_)) {
+            ROS_WARN_THROTTLE(2.0, "Failed to integrate Robotiq velocity command");
+        }
+    }
+
+    double clampWidth(double width) const {
+        return std::max(min_width_, std::min(width, max_width_));
     }
 
     ros::NodeHandle nh_;
@@ -156,6 +215,9 @@ class RobotiqNode {
     double default_force_ratio_ = 0.5;
     bool auto_initialize_ = false;
     bool invert_service_direction_ = false;
+    double velocity_gain_mps_ = 0.04;
+    bool velocity_use_spread_field_ = false;
+    bool invert_velocity_direction_ = false;
     bool initialized_ = false;
 
     RobotiqGripper gripper_;
@@ -169,6 +231,12 @@ class RobotiqNode {
 
     std_srvs::Empty::Request empty_req_;
     std_srvs::Empty::Response empty_res_;
+
+    double min_width_ = 0.0;
+    double max_width_ = 0.14;
+    double commanded_width_ = 0.14;
+    bool commanded_width_initialized_ = false;
+    ros::Time last_velocity_command_time_;
 };
 
 int main(int argc, char** argv) {
