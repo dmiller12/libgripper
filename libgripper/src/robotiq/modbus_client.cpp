@@ -1,4 +1,5 @@
 #include "gripper/robotiq/modbus_client.h"
+#include "../communication/serial_communicator.h"
 
 #include <iostream>
 

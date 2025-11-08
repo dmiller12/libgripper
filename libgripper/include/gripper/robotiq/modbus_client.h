@@ -1,8 +1,6 @@
 #pragma once
 
 #include "gripper/robotiq/register_map.h"
-#include "serial_communicator.h"
-
 #include <boost/optional.hpp>
 
 #include <cstdint>
@@ -12,6 +10,8 @@
 
 namespace gripper {
 namespace robotiq {
+
+class SerialCommunicator;
 
 class RobotiqModbusClient {
   public:
