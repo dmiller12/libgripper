@@ -16,6 +16,7 @@ class SerialCommunicator;
 class RobotiqModbusClient {
   public:
     explicit RobotiqModbusClient(uint8_t slave_id = 0x09);
+    ~RobotiqModbusClient();
 
     RobotiqModbusClient(const RobotiqModbusClient&) = delete;
     RobotiqModbusClient& operator=(const RobotiqModbusClient&) = delete;
