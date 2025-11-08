@@ -22,6 +22,7 @@ class RobotiqNode {
         nh_.param<double>("default_speed_ratio", default_speed_ratio_, 0.4);
         nh_.param<double>("default_force_ratio", default_force_ratio_, 0.5);
         nh_.param<bool>("auto_initialize", auto_initialize_, false);
+        nh_.param<bool>("invert_service_direction", invert_service_direction_, false);
 
         joint_state_pub_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
         position_setpoint_sub_ = nh_.subscribe("position_setpoint", 1, &RobotiqNode::positionSetpointCb, this);
@@ -108,6 +109,9 @@ class RobotiqNode {
         if (!ensureReady()) {
             return false;
         }
+        if (invert_service_direction_) {
+            return gripper_.close();
+        }
         return gripper_.open();
     }
 
@@ -116,6 +120,9 @@ class RobotiqNode {
         (void)res;
         if (!ensureReady()) {
             return false;
+        }
+        if (invert_service_direction_) {
+            return gripper_.open();
         }
         return gripper_.close();
     }
@@ -148,6 +155,7 @@ class RobotiqNode {
     double default_speed_ratio_ = 0.4;
     double default_force_ratio_ = 0.5;
     bool auto_initialize_ = false;
+    bool invert_service_direction_ = false;
     bool initialized_ = false;
 
     RobotiqGripper gripper_;

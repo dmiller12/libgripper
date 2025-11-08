@@ -116,5 +116,8 @@ ROS interface for the Robotiq 2F-140 gripper. The node drives the gripper over a
 - `~default_force_ratio` (double, default: `0.5`)
     Normalized force (0–1) used for every command.
 
+- `~invert_service_direction` (bool, default: `false`)
+    When `true`, swaps the behavior of `~open_grasp` and `~close_grasp` to accommodate installations where the wiring feels reversed.
+
 - `~auto_initialize` (bool, default: `false`)
     Automatically calls the initialize service on startup when true.
