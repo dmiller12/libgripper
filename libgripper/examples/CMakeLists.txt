@@ -14,6 +14,7 @@ add_executable(test_bhand
 target_link_libraries(test_bhand
     PRIVATE
         gripper
+        Threads::Threads
 )
 
 add_executable(test_bhand_keyboard
@@ -23,6 +24,7 @@ add_executable(test_bhand_keyboard
 target_link_libraries(test_bhand_keyboard
     PRIVATE
         gripper
+        Threads::Threads
 )
 
 add_executable(static_friction_estimate
