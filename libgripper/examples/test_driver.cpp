@@ -25,6 +25,14 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Successfully connected." << std::endl;
 
+    driver.disconnect();
+    auto result_fail = driver.sendSupervisoryCommand("HI").get();
+    if (!result_fail) {
+        std::cerr << "Error: " << result_fail.error().message() << std::endl;
+    }
+
+    driver.connect(port);
+
     // Send the HI supervisory command to initialize all motors
     auto result_future = driver.sendSupervisoryCommand("HI");
 

@@ -37,3 +37,8 @@ The real-time mode is used to provide reference values to lower level controller
 The primary way to stay in real-time mode is to use the setPosition and setVelocity methods. These calls set the reference value for PID controllers that are then passed to the device. Importantly, these calls do not generate a trajectory, so care must be taken to ensure the provided target is not too far from the current state. 
 All other calls, such as open() close(), moveTo(), etc, will exit real-time mode, issue the supervisory command, and the immediately return to real-time mode. 
 These supervisory calls can be convenient in that they do follow a smooth trajectory, however state information will not be updated until the entire move is complete.
+
+# External control
+You can control the hand from an external computer by using the serial cable connected to Zeus' motherboard.
+Then, on Zeus, run the `./bridge_serial` from the home directory. This takes communication from `/dev/ttyS1` and passes it to the hand serial port `/dev/ttyS0`. 
+Then you can communicate with the hand from an external computer, this is typically `/dev/ttyUSB0` when using the serial to USB converter.

@@ -53,9 +53,9 @@ double run_viscous_test_for_motor(BarrettHandDriver& driver, MotorID motor_to_te
     motor_settings.LCPG = true;
     settings.motor_settings[motor_to_test] = motor_settings;
 
-    driver.sendSupervisoryCommand("GO").get();
+    (void)driver.sendSupervisoryCommand("GO").get();
 
-    const MotorGroup motor_to_test_group = static_cast<MotorGroup>(motor_to_test);
+    auto motor_to_test_group = static_cast<MotorGroup>(motor_to_test);
     check_outcome(driver.configureRealtime(settings), "Failed to configure real-time mode");
 
     // --- State variables for this test run ---
@@ -82,7 +82,7 @@ double run_viscous_test_for_motor(BarrettHandDriver& driver, MotorID motor_to_te
         // Send the constant target velocity command directly to the hand's internal controller
         RealtimeControlSetpoint setpoint;
         setpoint.velocity_commands[motor_to_test] = velocity_command;
-        setpoint.proportional_gains[motor_to_test] = 30; // A nominal gain
+        setpoint.proportional_gains[motor_to_test] = 20; // A nominal gain
         return setpoint;
     };
 
@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    driver.sendSupervisoryCommand("HI").get();
+    (void)driver.sendSupervisoryCommand("HI").get();
 
     const std::vector<MotorID> FINGERS_TO_TEST = {MotorID::F1, MotorID::F2, MotorID::F3};
     const std::vector<double> VELOCITY_COMMANDS = {0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1};
