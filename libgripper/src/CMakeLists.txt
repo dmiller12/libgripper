@@ -9,11 +9,13 @@ add_library(gripper SHARED
 )
 
 find_package(Boost 1.71.0 REQUIRED COMPONENTS system thread)
+find_package(Threads REQUIRED)
 
 target_link_libraries(gripper
     PRIVATE
         Boost::system
         Boost::thread
+        Threads::Threads
 )
 
 target_include_directories(gripper
