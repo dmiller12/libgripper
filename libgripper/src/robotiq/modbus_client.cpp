@@ -24,7 +24,6 @@ RobotiqModbusClient::RobotiqModbusClient(uint8_t slave_id)
 }
 
 RobotiqModbusClient::~RobotiqModbusClient() = default;
-}
 
 bool RobotiqModbusClient::connect(const std::string& port, unsigned int baud_rate) {
     std::lock_guard<std::mutex> lock(io_mutex_);

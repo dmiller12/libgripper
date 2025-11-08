@@ -8,10 +8,10 @@
 #include <mutex>
 #include <vector>
 
+class SerialCommunicator;
+
 namespace gripper {
 namespace robotiq {
-
-class SerialCommunicator;
 
 class RobotiqModbusClient {
   public:
