@@ -195,7 +195,11 @@ BarrettHandDriver::startRealtimeControl(RealtimeCallback callback, MotorGroup gr
     realtime_callback_ = std::move(callback);
 
     std::string loop_cmd = motorGroupToPrefix(group) + "LOOP";
-    BOOST_OUTCOME_TRY(auto response, sendAsynchronousCommand(loop_cmd, 500, true).get());
+    auto response_result = sendAsynchronousCommand(loop_cmd, 500, true).get();
+    if (!response_result) {
+        return response_result.error();
+    }
+    const std::string& response = response_result.value();
 
     if (response.find('*') == std::string::npos) {
         return make_error_code(BarrettHandError::NO_LOOP_ACK);
