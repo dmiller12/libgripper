@@ -8,17 +8,12 @@
 
 #include "moteus.h"
 #include "magnum_gripper_config.h"
+#include "magnum_types.h"
 
 namespace gripper {
 namespace magnum_opus {
 
 namespace moteus = mjbots::moteus;
-
-struct GripperState {
-    double position{0.0};
-    double velocity{0.0};
-    double torque{0.0};
-};
 
 /**
  * @class MagnumGripperDriver

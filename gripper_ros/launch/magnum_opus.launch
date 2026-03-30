@@ -1,0 +1,12 @@
+<launch>
+
+  <node
+    pkg="gripper_ros"
+    type="magnum_opus_node"
+    name="magnum_opus_node"
+    output="screen">
+
+  </node>
+
+</launch>
+

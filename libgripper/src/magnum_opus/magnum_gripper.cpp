@@ -1,4 +1,5 @@
 #include "gripper/magnum_opus/magnum_gripper.h"
+#include "gripper/magnum_opus/magnum_gripper_driver.h"
 #include "gripper/magnum_opus/magnum_gripper_config.h"
 #include "gripper/utils.h"
 #include <algorithm>
@@ -30,6 +31,9 @@ bool MagnumGripper::initialize() {
         return false;
     }
 
+    gripper_close_pos_ = config.max_pos;
+    gripper_open_pos_ = config.min_pos;
+
     // update local state without sending pos command
     driver_->queryState();
 
@@ -45,6 +49,16 @@ void MagnumGripper::shutdown() {
     if (driver_ && driver_->isConnected()) {
         driver_->disconnect();
     }
+}
+
+double MagnumGripper::getGripperClosePos() {
+    std::lock_guard<std::mutex> lock(target_mutex_);
+    return gripper_close_pos_;
+}
+
+double MagnumGripper::getGripperOpenPos() {
+    std::lock_guard<std::mutex> lock(target_mutex_);
+    return gripper_open_pos_;
 }
 
 void MagnumGripper::setPosition(double position) {

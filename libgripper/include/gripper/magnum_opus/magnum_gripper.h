@@ -1,6 +1,6 @@
 #pragma once
 
-#include "magnum_gripper_driver.h"
+#include "magnum_types.h"
 #include <memory>
 #include <mutex>
 #include <string>
@@ -8,7 +8,7 @@
 namespace gripper {
 namespace magnum_opus {
 
-enum class ControlMode { None, Position, Velocity };
+class MagnumGripperDriver;
 
 /**
  * @class MagnumGripper
@@ -28,6 +28,9 @@ class MagnumGripper {
     
     void setPosition(double position);
     void setVelocity(double velocity);
+
+    double getGripperClosePos();
+    double getGripperOpenPos();
     
     void controlLoopCallback();
     
@@ -40,6 +43,8 @@ class MagnumGripper {
     mutable std::mutex target_mutex_;
     double target_position_{0.0};
     double target_velocity_{0.0};
+    double gripper_close_pos_{0.0};
+    double gripper_open_pos_{-0.2};
     ControlMode control_mode_{ControlMode::None};
 
     mutable std::mutex state_mutex_;
