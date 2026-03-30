@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "moteus.h"
+#include "magnum_gripper_config.h"
 
 namespace gripper {
 namespace magnum_opus {
@@ -17,7 +18,6 @@ struct GripperState {
     double position{0.0};
     double velocity{0.0};
     double torque{0.0};
-    double temperature_c{0.0};
 };
 
 /**
@@ -32,10 +32,11 @@ class MagnumGripperDriver {
     MagnumGripperDriver(const MagnumGripperDriver&) = delete;
     MagnumGripperDriver& operator=(const MagnumGripperDriver&) = delete;
 
-    bool connect(const std::string& can_interface = "can0");
+    bool connect(const MagnumGripperConfig& config);
     void disconnect();
     bool isConnected() const;
 
+    bool queryState();
     bool executeControlCycle(const moteus::PositionMode::Command& cmd);
     
     GripperState getLatestState() const;
@@ -51,6 +52,8 @@ class MagnumGripperDriver {
 
     mutable std::mutex state_mutex_;
     GripperState latest_state_;
+
+    bool sendCmd();
 };
 
 } // namespace magnum_opus

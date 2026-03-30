@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 project(gripper VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -33,6 +33,15 @@ install(TARGETS gripper
 
 install(DIRECTORY include/gripper/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gripper
+)
+
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/config/
+  DESTINATION /etc/haptic_gripper
+  FILES_MATCHING PATTERN "*.yaml"
+  PERMISSIONS
+    OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_WRITE GROUP_EXECUTE
+    WORLD_READ WORLD_WRITE WORLD_EXECUTE
 )
 
 install(FILES

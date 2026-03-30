@@ -1,0 +1,7 @@
+magnum_gripper:
+  can_interface: "can0"
+  motor_id: 1
+  pid_position:
+    kp: 50.0
+    ki: 1.0
+    kd: 0.2

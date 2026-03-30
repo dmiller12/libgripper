@@ -23,7 +23,7 @@ class MagnumGripper {
     MagnumGripper(const MagnumGripper&) = delete;
     MagnumGripper& operator=(const MagnumGripper&) = delete;
 
-    bool initialize(const std::string& interface = "can0");
+    bool initialize();
     void shutdown();
     
     void setPosition(double position);
@@ -32,6 +32,7 @@ class MagnumGripper {
     void controlLoopCallback();
     
     GripperState getLatestState() const;
+    void updateLocalState();
 
   private:
     std::unique_ptr<MagnumGripperDriver> driver_;

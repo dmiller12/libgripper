@@ -1,7 +1,10 @@
 #include "gripper/magnum_opus/magnum_gripper.h"
+#include "gripper/magnum_opus/magnum_gripper_config.h"
+#include "gripper/utils.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+
 
 namespace gripper {
 namespace magnum_opus {
@@ -14,13 +17,25 @@ MagnumGripper::~MagnumGripper() {
     shutdown();
 }
 
-bool MagnumGripper::initialize(const std::string& interface) {
-    if (!driver_->connect(interface)) {
+bool MagnumGripper::initialize() {
+    const std::string config_dir = get_config_directory();
+    if (config_dir.empty()) {
+        throw std::runtime_error("No valid configuration directory found.");
+    }
+
+    const MagnumGripperConfig config = load_config(config_dir);
+
+    if (!driver_->connect(config)) {
         std::cerr << "Failed to initialize Magnum Gripper." << std::endl;
         return false;
     }
 
-    target_position_ = 0.0;
+    // update local state without sending pos command
+    driver_->queryState();
+
+    GripperState gripper_state = driver_->getLatestState();
+    target_position_ = gripper_state.position;
+    target_velocity_ = gripper_state.velocity;
     control_mode_ = ControlMode::Position;
     
     return true;
@@ -44,6 +59,7 @@ void MagnumGripper::setVelocity(double velocity) {
     control_mode_ = ControlMode::Velocity;
 }
 
+// sending a command with this function will update local state so you wont need to poll.
 void MagnumGripper::controlLoopCallback() {
     if (!driver_->isConnected()) return;
 
@@ -52,7 +68,8 @@ void MagnumGripper::controlLoopCallback() {
     {
         std::lock_guard<std::mutex> lock(target_mutex_);
         if (control_mode_ == ControlMode::Position) {
-            cmd.position = target_position_; 
+            cmd.position = target_position_;
+            std::cout << "sending pos " << target_position_ << std::endl;
         } else if (control_mode_ == ControlMode::Velocity) {
             cmd.position = std::numeric_limits<double>::quiet_NaN();
             cmd.velocity = target_velocity_;
@@ -67,9 +84,13 @@ void MagnumGripper::controlLoopCallback() {
     latest_state_ = driver_->getLatestState();
 }
 
+// call updateLocalState before this function if you did not call controlLoopCallback recently
 GripperState MagnumGripper::getLatestState() const {
-    std::lock_guard<std::mutex> lock(state_mutex_);
-    return latest_state_;
+    return driver_->getLatestState();
+}
+
+void MagnumGripper::updateLocalState() {
+    driver_->queryState();
 }
 
 } // namespace magnum_opus

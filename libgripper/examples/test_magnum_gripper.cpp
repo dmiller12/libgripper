@@ -6,17 +6,9 @@
 using namespace gripper::magnum_opus;
 
 int main(int argc, char** argv) {
-    std::string can_iface = "can0";
-    if (argc > 1) {
-        can_iface = argv[1];
-    }
-
-    std::cout << "--- Magnum Gripper Basic Test ---" << std::endl;
-    std::cout << "Attempting to connect on interface: " << can_iface << std::endl;
-
     MagnumGripper gripper;
 
-    if (!gripper.initialize(can_iface)) {
+    if (!gripper.initialize()) {
         std::cerr << "ERROR: Failed to initialize Magnum Gripper." << std::endl;
         return -1;
     }
@@ -24,8 +16,9 @@ int main(int argc, char** argv) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    std::cout << "\nStarting state reading loop (10 iterations)..." << std::endl;
-    for (int i = 0; i < 10; ++i) {
+    gripper.setPosition(-0.01);
+    for (int i = 0; i < 200; ++i) {
+        // gripper.updateLocalState();
         gripper.controlLoopCallback();
 
         GripperState state = gripper.getLatestState();
@@ -33,15 +26,13 @@ int main(int argc, char** argv) {
         std::cout << "Iter " << i << " | "
                   << "Pos: " << state.position << " | "
                   << "Vel: " << state.velocity << " | "
-                  << "Trq: " << state.torque << " | "
-                  << "Temp: " << state.temperature_c << " °C" << std::endl;
+                  << "Trq: " << state.torque << std::endl;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    std::cout << "\nShutting down..." << std::endl;
     gripper.shutdown();
-    std::cout << "Disconnected successfully. Test complete." << std::endl;
+    std::cout << "Disconnected successfully." << std::endl;
 
     return 0;
 }

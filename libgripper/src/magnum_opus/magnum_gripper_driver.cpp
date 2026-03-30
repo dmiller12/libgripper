@@ -18,19 +18,18 @@ MagnumGripperDriver::~MagnumGripperDriver() {
     disconnect();
 }
 
-bool MagnumGripperDriver::connect(const std::string& can_interface) {
+bool MagnumGripperDriver::connect(const MagnumGripperConfig& config) {
     if (is_connected_) {
         return true;
     }
 
-    try {
-        std::vector<std::string> args = {"--can-iface", can_interface};
+   try {
+        std::vector<std::string> args = {"--can-iface", config.can_interface};
         moteus::Controller::ProcessTransportArgs(args);
         transport_ = moteus::Controller::MakeSingletonTransport({});
 
-        // Configure the single Moteus controller (assuming ID 1)
         moteus::Controller::Options opts;
-        opts.id = 1;
+        opts.id = config.motor_id;
         
         auto& pf = opts.position_format;
         pf.position = moteus::kFloat;
@@ -41,6 +40,11 @@ bool MagnumGripperDriver::connect(const std::string& can_interface) {
 
         controller_->DiagnosticWrite("tel stop\n");
         controller_->DiagnosticFlush();
+
+        controller_->DiagnosticCommand("conf set servo.pid_position.kp " + std::to_string(config.pid_position.kp));
+        controller_->DiagnosticCommand("conf set servo.pid_position.ki " + std::to_string(config.pid_position.ki));
+        controller_->DiagnosticCommand("conf set servo.pid_position.kd " + std::to_string(config.pid_position.kd));
+        
         controller_->SetStop();
 
         is_connected_ = true;
@@ -68,15 +72,16 @@ bool MagnumGripperDriver::isConnected() const {
     return is_connected_;
 }
 
-bool MagnumGripperDriver::executeControlCycle(const moteus::PositionMode::Command& cmd) {
+// send a command to the controller and update our local state of the motor
+bool MagnumGripperDriver::sendCmd() {
     if (!is_connected_) return false;
 
-    send_frames_.clear();
-    send_frames_.push_back(controller_->MakePosition(cmd));
-
     receive_frames_.clear();
+    
+    // Transmit whatever is currently in send_frames_
     transport_->BlockingCycle(&send_frames_[0], send_frames_.size(), &receive_frames_);
 
+    // Parse the response
     for (auto it = receive_frames_.rbegin(); it != receive_frames_.rend(); ++it) {
         if (it->source == controller_->options().id) {
             auto result = moteus::Query::Parse(it->data, it->size);
@@ -85,11 +90,24 @@ bool MagnumGripperDriver::executeControlCycle(const moteus::PositionMode::Comman
             latest_state_.position = result.position;
             latest_state_.velocity = result.velocity;
             latest_state_.torque = result.torque;
-            latest_state_.temperature_c = result.temperature;
             return true;
         }
     }
     return false;
+}
+
+bool MagnumGripperDriver::queryState() {
+    send_frames_.clear();
+    send_frames_.push_back(controller_->MakeQuery());
+
+    return sendCmd();
+}
+
+bool MagnumGripperDriver::executeControlCycle(const moteus::PositionMode::Command& cmd) {
+    send_frames_.clear();
+    send_frames_.push_back(controller_->MakePosition(cmd));
+
+    return sendCmd();
 }
 
 GripperState MagnumGripperDriver::getLatestState() const {
@@ -97,5 +115,5 @@ GripperState MagnumGripperDriver::getLatestState() const {
     return latest_state_;
 }
 
-} // namespace barrett
+} // namespace magnum_opus
 } // namespace gripper
