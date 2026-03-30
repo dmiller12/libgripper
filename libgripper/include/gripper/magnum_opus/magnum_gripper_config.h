@@ -19,6 +19,8 @@ struct MagnumGripperConfig {
     std::string can_interface{"can0"};
     int motor_id{1};
     PidConfig pid_position;
+    double min_pos;
+    double max_pos;
 };
 
 MagnumGripperConfig load_config(const std::string& config_dir);
@@ -44,6 +46,8 @@ struct convert<gripper::magnum_opus::MagnumGripperConfig> {
         if (node["can_interface"]) c.can_interface = node["can_interface"].as<std::string>();
         if (node["motor_id"]) c.motor_id = node["motor_id"].as<int>();
         if (node["pid_position"]) c.pid_position = node["pid_position"].as<gripper::magnum_opus::PidConfig>();
+        c.min_pos = node["min_pos"].as<double>();
+        c.max_pos = node["max_pos"].as<double>();
         return true;
     }
 };

@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    gripper.setPosition(-0.01);
+    gripper.setPosition(-0.03);
     for (int i = 0; i < 200; ++i) {
         // gripper.updateLocalState();
         gripper.controlLoopCallback();

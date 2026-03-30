@@ -44,6 +44,8 @@ bool MagnumGripperDriver::connect(const MagnumGripperConfig& config) {
         controller_->DiagnosticCommand("conf set servo.pid_position.kp " + std::to_string(config.pid_position.kp));
         controller_->DiagnosticCommand("conf set servo.pid_position.ki " + std::to_string(config.pid_position.ki));
         controller_->DiagnosticCommand("conf set servo.pid_position.kd " + std::to_string(config.pid_position.kd));
+        controller_->DiagnosticCommand("conf set servopos.position_min " + std::to_string(config.min_pos));
+        controller_->DiagnosticCommand("conf set servopos.position_max " + std::to_string(config.max_pos));
         
         controller_->SetStop();
 
