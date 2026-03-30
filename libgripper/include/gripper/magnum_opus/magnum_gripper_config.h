@@ -21,6 +21,8 @@ struct MagnumGripperConfig {
     PidConfig pid_position;
     double min_pos;
     double max_pos;
+    double max_vel;
+    double max_acc;
 };
 
 MagnumGripperConfig load_config(const std::string& config_dir);
@@ -48,6 +50,8 @@ struct convert<gripper::magnum_opus::MagnumGripperConfig> {
         if (node["pid_position"]) c.pid_position = node["pid_position"].as<gripper::magnum_opus::PidConfig>();
         c.min_pos = node["min_pos"].as<double>();
         c.max_pos = node["max_pos"].as<double>();
+        c.max_vel = node["max_vel"].as<double>();
+        c.max_acc = node["max_acc"].as<double>();
         return true;
     }
 };

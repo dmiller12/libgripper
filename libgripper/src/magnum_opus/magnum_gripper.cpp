@@ -83,7 +83,6 @@ void MagnumGripper::controlLoopCallback() {
         std::lock_guard<std::mutex> lock(target_mutex_);
         if (control_mode_ == ControlMode::Position) {
             cmd.position = target_position_;
-            std::cout << "sending pos " << target_position_ << std::endl;
         } else if (control_mode_ == ControlMode::Velocity) {
             cmd.position = std::numeric_limits<double>::quiet_NaN();
             cmd.velocity = target_velocity_;

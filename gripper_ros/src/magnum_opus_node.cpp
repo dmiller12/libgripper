@@ -5,7 +5,7 @@
 #include "gripper/magnum_opus/magnum_gripper.h"
 #include <gripper_ros_common/PositionSetpoint.h>
 #include <gripper_ros_common/VelocitySetpoint.h>
-
+    
 using namespace gripper::magnum_opus;
 
 class MagnumWrapper {
@@ -14,6 +14,9 @@ class MagnumWrapper {
         : nh_(nh) {
         
         magnum_ = std::make_unique<MagnumGripper>();
+
+        open_pos_ = magnum_->getGripperOpenPos();
+        close_pos_ = magnum_->getGripperClosePos();
 
         joint_state_pub_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
 
@@ -56,8 +59,8 @@ class MagnumWrapper {
     ros::Publisher joint_state_pub_;
     std::unique_ptr<MagnumGripper> magnum_;
     
-    double open_pos_ = magnum_->getGripperOpenPos();
-    double close_pos_ = magnum_->getGripperClosePos();
+    double open_pos_;
+    double close_pos_;
 
     ros::Subscriber position_setpoint_sub_;
     ros::Subscriber velocity_setpoint_sub_;

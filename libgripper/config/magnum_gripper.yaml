@@ -2,8 +2,10 @@ magnum_gripper:
   can_interface: "can0"
   motor_id: 1
   pid_position:
-    kp: 50.0
-    ki: 1.0
-    kd: 0.2
+    kp: 15.0
+    ki: 0.0
+    kd: 5
   min_pos: -0.35
   max_pos: 0.0
+  max_vel: 0.01
+  max_acc: 0.01
