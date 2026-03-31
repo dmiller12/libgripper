@@ -24,9 +24,7 @@ bool MagnumGripperDriver::connect(const MagnumGripperConfig& config) {
     }
 
    try {
-        std::vector<std::string> args = {"--can-iface", config.can_interface};
-        moteus::Controller::ProcessTransportArgs(args);
-        transport_ = moteus::Controller::MakeSingletonTransport({});
+        transport_ = std::make_shared<moteus::Fdcanusb>(config.can_interface);
 
         moteus::Controller::Options opts;
         opts.id = config.motor_id;

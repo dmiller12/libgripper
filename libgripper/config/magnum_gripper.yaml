@@ -1,5 +1,5 @@
 magnum_gripper:
-  can_interface: "can0"
+  can_interface: "/dev/serial/by-id/usb-mjbots_fdcanusb_C54FFEC3-if00"
   motor_id: 1
   pid_position:
     kp: 15.0
