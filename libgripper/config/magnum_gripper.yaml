@@ -6,6 +6,6 @@ magnum_gripper:
     ki: 0.0
     kd: 5
   min_pos: -0.35
-  max_pos: 0.0
+  max_pos: 0.005
   max_vel: 0.01
   max_acc: 0.01
