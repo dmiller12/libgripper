@@ -28,6 +28,7 @@ bool MagnumGripperDriver::connect(const MagnumGripperConfig& config) {
 
         moteus::Controller::Options opts;
         opts.id = config.motor_id;
+        opts.transport = transport_;
         
         auto& pf = opts.position_format;
         pf.position = moteus::kFloat;
