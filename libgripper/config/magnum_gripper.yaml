@@ -1,5 +1,6 @@
 magnum_gripper:
-  can_interface: "/dev/serial/by-id/usb-mjbots_fdcanusb_5B75C352-if00" # bottom left usbc on laptop
+  # can_interface: "/dev/serial/by-id/usb-mjbots_fdcanusb_5B75C352-if00" # bottom left usbc on laptop
+  can_interface: "can0" # bottom left usbc on laptop
   motor_id: 3
   pid_position:
     kp: 15.0
