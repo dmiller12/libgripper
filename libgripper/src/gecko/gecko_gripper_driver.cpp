@@ -24,7 +24,10 @@ bool GeckoGripperDriver::connect(const GeckoGripperConfig& config) {
     }
 
    try {
-        transport_ = std::make_shared<moteus::Fdcanusb>(config.can_interface);
+        // transport_ = std::make_shared<moteus::Fdcanusb>(config.can_interface);
+        moteus::Socketcan::Options can_opts;
+        can_opts.ifname = config.can_interface;
+        transport_ = std::make_shared<moteus::Socketcan>(can_opts);
 
         moteus::Controller::Options opts;
         opts.id = config.motor_id;
