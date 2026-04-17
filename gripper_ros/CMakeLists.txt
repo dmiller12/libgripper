@@ -26,7 +26,7 @@ target_link_libraries(bhand_node
   gripper::gripper
 )
 
-target_link_libraries(gecko_opus_node
+target_link_libraries(gecko_node
   ${catkin_LIBRARIES}
   gripper::gripper
 )
