@@ -2,8 +2,8 @@
 
   <node
     pkg="gripper_ros"
-    type="magnum_opus_node"
-    name="magnum_opus_node"
+    type="gecko_node"
+    name="gecko_node"
     output="screen">
 
   </node>

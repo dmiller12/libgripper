@@ -1,7 +1,7 @@
 #pragma once
 
 namespace gripper {
-namespace magnum_opus {
+namespace gecko {
 
 struct GripperState {
     double position{0.0};
@@ -11,5 +11,5 @@ struct GripperState {
 
 enum class ControlMode { None, Position, Velocity };
 
-} // namespace magnum_opus
+} // namespace gecko
 } // namespace gripper

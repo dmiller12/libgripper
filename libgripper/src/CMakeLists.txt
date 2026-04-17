@@ -20,8 +20,8 @@ add_library(gripper SHARED
     barrett/barrett_hand_driver.cpp
     barrett/position_controller.cpp
     barrett/velocity_controller.cpp
-    magnum_opus/magnum_gripper.cpp
-    magnum_opus/magnum_gripper_driver.cpp
+    gecko/gecko_gripper.cpp
+    gecko/gecko_gripper_driver.cpp
     utils.cpp
     communication/serial_communicator.cpp
 )

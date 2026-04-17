@@ -1,15 +1,15 @@
-#include "gripper/magnum_opus/magnum_gripper.h"
+#include "gripper/gecko/gecko_gripper.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
 
-using namespace gripper::magnum_opus;
+using namespace gripper::gecko;
 
 int main(int argc, char** argv) {
-    MagnumGripper gripper;
+    GeckoGripper gripper;
 
     if (!gripper.initialize()) {
-        std::cerr << "ERROR: Failed to initialize Magnum Gripper." << std::endl;
+        std::cerr << "ERROR: Failed to initialize Gecko Gripper." << std::endl;
         return -1;
     }
     std::cout << "Successfully connected to Moteus controller." << std::endl;

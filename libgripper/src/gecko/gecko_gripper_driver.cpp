@@ -1,4 +1,4 @@
-#include "gripper/magnum_opus/magnum_gripper_driver.h"
+#include "gripper/gecko/gecko_gripper_driver.h"
 
 #include <algorithm>
 #include <boost/outcome/try.hpp>
@@ -8,17 +8,17 @@
 #include <vector>
 
 namespace gripper {
-namespace magnum_opus {
+namespace gecko {
 
-MagnumGripperDriver::MagnumGripperDriver() 
+GeckoGripperDriver::GeckoGripperDriver() 
     : is_connected_(false) {
 }
 
-MagnumGripperDriver::~MagnumGripperDriver() {
+GeckoGripperDriver::~GeckoGripperDriver() {
     disconnect();
 }
 
-bool MagnumGripperDriver::connect(const MagnumGripperConfig& config) {
+bool GeckoGripperDriver::connect(const GeckoGripperConfig& config) {
     if (is_connected_) {
         return true;
     }
@@ -58,7 +58,7 @@ bool MagnumGripperDriver::connect(const MagnumGripperConfig& config) {
     }
 }
 
-void MagnumGripperDriver::disconnect() {
+void GeckoGripperDriver::disconnect() {
     if (!is_connected_) return;
 
     if (controller_) {
@@ -71,12 +71,12 @@ void MagnumGripperDriver::disconnect() {
     is_connected_ = false;
 }
 
-bool MagnumGripperDriver::isConnected() const {
+bool GeckoGripperDriver::isConnected() const {
     return is_connected_;
 }
 
 // send a command to the controller and update our local state of the motor
-bool MagnumGripperDriver::sendCmd() {
+bool GeckoGripperDriver::sendCmd() {
     if (!is_connected_) return false;
 
     receive_frames_.clear();
@@ -99,24 +99,24 @@ bool MagnumGripperDriver::sendCmd() {
     return false;
 }
 
-bool MagnumGripperDriver::queryState() {
+bool GeckoGripperDriver::queryState() {
     send_frames_.clear();
     send_frames_.push_back(controller_->MakeQuery());
 
     return sendCmd();
 }
 
-bool MagnumGripperDriver::executeControlCycle(const moteus::PositionMode::Command& cmd) {
+bool GeckoGripperDriver::executeControlCycle(const moteus::PositionMode::Command& cmd) {
     send_frames_.clear();
     send_frames_.push_back(controller_->MakePosition(cmd));
 
     return sendCmd();
 }
 
-GripperState MagnumGripperDriver::getLatestState() const {
+GripperState GeckoGripperDriver::getLatestState() const {
     std::lock_guard<std::mutex> lock(state_mutex_);
     return latest_state_;
 }
 
-} // namespace magnum_opus
+} // namespace gecko
 } // namespace gripper

@@ -7,27 +7,27 @@
 #include <vector>
 
 #include "moteus.h"
-#include "magnum_gripper_config.h"
-#include "magnum_types.h"
+#include "gecko_gripper_config.h"
+#include "gecko_types.h"
 
 namespace gripper {
-namespace magnum_opus {
+namespace gecko {
 
 namespace moteus = mjbots::moteus;
 
 /**
- * @class MagnumGripperDriver
- * @brief Low-level driver for the Magnum Gripper communicating over Moteus CAN FD.
+ * @class GeckoGripperDriver
+ * @brief Low-level driver for the Gecko Gripper communicating over Moteus CAN FD.
  */
-class MagnumGripperDriver {
+class GeckoGripperDriver {
   public:
-    MagnumGripperDriver();
-    ~MagnumGripperDriver();
+    GeckoGripperDriver();
+    ~GeckoGripperDriver();
 
-    MagnumGripperDriver(const MagnumGripperDriver&) = delete;
-    MagnumGripperDriver& operator=(const MagnumGripperDriver&) = delete;
+    GeckoGripperDriver(const GeckoGripperDriver&) = delete;
+    GeckoGripperDriver& operator=(const GeckoGripperDriver&) = delete;
 
-    bool connect(const MagnumGripperConfig& config);
+    bool connect(const GeckoGripperConfig& config);
     void disconnect();
     bool isConnected() const;
 
@@ -51,5 +51,5 @@ class MagnumGripperDriver {
     bool sendCmd();
 };
 
-} // namespace magnum_opus
+} // namespace gecko
 } // namespace gripper

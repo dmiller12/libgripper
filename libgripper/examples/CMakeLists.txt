@@ -43,11 +43,11 @@ target_link_libraries(viscous_friction_estimate
         gripper
 )
 
-add_executable(test_magnum_gripper
-    test_magnum_gripper.cpp
+add_executable(test_gecko_gripper
+    test_gecko_gripper.cpp
 )
 
-target_link_libraries(test_magnum_gripper
+target_link_libraries(test_gecko_gripper
     PRIVATE
         gripper
 )

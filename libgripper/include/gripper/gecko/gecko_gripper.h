@@ -1,27 +1,27 @@
 #pragma once
 
-#include "magnum_types.h"
+#include "gecko_types.h"
 #include <memory>
 #include <mutex>
 #include <string>
 
 namespace gripper {
-namespace magnum_opus {
+namespace gecko {
 
-class MagnumGripperDriver;
+class GeckoGripperDriver;
 
 /**
- * @class MagnumGripper
- * @brief A high-level controller for the Magnum Gripper. This is the
+ * @class GeckoGripper
+ * @brief A high-level controller for the Gecko Gripper. This is the
  * recommended class for most users.
  */
-class MagnumGripper {
+class GeckoGripper {
   public:
-    MagnumGripper();
-    ~MagnumGripper();
+    GeckoGripper();
+    ~GeckoGripper();
 
-    MagnumGripper(const MagnumGripper&) = delete;
-    MagnumGripper& operator=(const MagnumGripper&) = delete;
+    GeckoGripper(const GeckoGripper&) = delete;
+    GeckoGripper& operator=(const GeckoGripper&) = delete;
 
     bool initialize();
     void shutdown();
@@ -38,7 +38,7 @@ class MagnumGripper {
     void updateLocalState();
 
   private:
-    std::unique_ptr<MagnumGripperDriver> driver_;
+    std::unique_ptr<GeckoGripperDriver> driver_;
     
     mutable std::mutex target_mutex_;
     double target_position_{0.0};
@@ -51,5 +51,5 @@ class MagnumGripper {
     GripperState latest_state_;
 };
 
-} // namespace magnum_opus
+} // namespace gecko
 } // namespace gripper

@@ -16,8 +16,8 @@ catkin_package(
 add_executable(bhand_node src/bhand_node.cpp)
 add_dependencies(bhand_node ${catkin_EXPORTED_TARGETS})
 
-add_executable(magnum_opus_node src/magnum_opus_node.cpp)
-add_dependencies(magnum_opus_node ${catkin_EXPORTED_TARGETS})
+add_executable(gecko_node src/gecko_node.cpp)
+add_dependencies(gecko_node ${catkin_EXPORTED_TARGETS})
 
 include_directories(${catkin_INCLUDE_DIRS})
 
@@ -26,7 +26,7 @@ target_link_libraries(bhand_node
   gripper::gripper
 )
 
-target_link_libraries(magnum_opus_node
+target_link_libraries(gecko_opus_node
   ${catkin_LIBRARIES}
   gripper::gripper
 )

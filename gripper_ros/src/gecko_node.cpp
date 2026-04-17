@@ -2,50 +2,50 @@
 #include <sensor_msgs/JointState.h>
 #include <std_srvs/Empty.h>
 
-#include "gripper/magnum_opus/magnum_gripper.h"
+#include "gripper/gecko/gecko_gripper.h"
 #include <gripper_ros_common/PositionSetpoint.h>
 #include <gripper_ros_common/VelocitySetpoint.h>
     
-using namespace gripper::magnum_opus;
+using namespace gripper::gecko;
 
-class MagnumWrapper {
+class GeckoWrapper {
   public:
-    MagnumWrapper(ros::NodeHandle& nh)
+    GeckoWrapper(ros::NodeHandle& nh)
         : nh_(nh) {
         
-        magnum_ = std::make_unique<MagnumGripper>();
+        gecko_ = std::make_unique<GeckoGripper>();
 
-        open_pos_ = magnum_->getGripperOpenPos();
-        close_pos_ = magnum_->getGripperClosePos();
+        open_pos_ = gecko_->getGripperOpenPos();
+        close_pos_ = gecko_->getGripperClosePos();
 
         joint_state_pub_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
 
-        position_setpoint_sub_ = nh_.subscribe("position_setpoint", 1, &MagnumWrapper::positionSetpointCb, this);
-        velocity_setpoint_sub_ = nh_.subscribe("velocity_setpoint", 1, &MagnumWrapper::velocitySetpointCb, this);
+        position_setpoint_sub_ = nh_.subscribe("position_setpoint", 1, &GeckoWrapper::positionSetpointCb, this);
+        velocity_setpoint_sub_ = nh_.subscribe("velocity_setpoint", 1, &GeckoWrapper::velocitySetpointCb, this);
 
-        initialize_srv_ = nh_.advertiseService("initialize", &MagnumWrapper::initializeCb, this);
-        open_grasp_srv_ = nh_.advertiseService("open_grasp", &MagnumWrapper::openGraspCb, this);
-        close_grasp_srv_ = nh_.advertiseService("close_grasp", &MagnumWrapper::closeGraspCb, this);
+        initialize_srv_ = nh_.advertiseService("initialize", &GeckoWrapper::initializeCb, this);
+        open_grasp_srv_ = nh_.advertiseService("open_grasp", &GeckoWrapper::openGraspCb, this);
+        close_grasp_srv_ = nh_.advertiseService("close_grasp", &GeckoWrapper::closeGraspCb, this);
 
-        ROS_INFO("Magnum Gripper ROS node started.");
+        ROS_INFO("Gecko Gripper ROS node started.");
     }
 
     void initializeHand() {
-        if (!magnum_->initialize()) {
-            ROS_ERROR("Failed to initialize Magnum Gripper via config.");
+        if (!gecko_->initialize()) {
+            ROS_ERROR("Failed to initialize Gecko Gripper via config.");
         }
     }
 
     void spinControlLoop() {
-        magnum_->controlLoopCallback();
+        gecko_->controlLoopCallback();
     }
 
     void publishState() {
         sensor_msgs::JointState msg;
         msg.header.stamp = ros::Time::now();
-        msg.name = {"magnum_gripper"};
+        msg.name = {"gecko_gripper"};
 
-        GripperState currentState = magnum_->getLatestState();
+        GripperState currentState = gecko_->getLatestState();
         
         msg.position = {currentState.position};
         msg.velocity = {currentState.velocity};
@@ -57,7 +57,7 @@ class MagnumWrapper {
   private:
     ros::NodeHandle nh_;
     ros::Publisher joint_state_pub_;
-    std::unique_ptr<MagnumGripper> magnum_;
+    std::unique_ptr<GeckoGripper> gecko_;
     
     double open_pos_;
     double close_pos_;
@@ -70,11 +70,11 @@ class MagnumWrapper {
     ros::ServiceServer close_grasp_srv_;
 
     void positionSetpointCb(const gripper_ros_common::PositionSetpointConstPtr& msg) {
-        magnum_->setPosition(msg->grasp);
+        gecko_->setPosition(msg->grasp);
     }
 
     void velocitySetpointCb(const gripper_ros_common::VelocitySetpointConstPtr& msg) {
-        magnum_->setVelocity(msg->grasp);
+        gecko_->setVelocity(msg->grasp);
     }
 
     bool initializeCb(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res) {
@@ -84,31 +84,31 @@ class MagnumWrapper {
 
     bool openGraspCb(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res) {
         ROS_INFO("Opening grasp to position: %f", open_pos_);
-        magnum_->setPosition(open_pos_);
+        gecko_->setPosition(open_pos_);
         return true;
     }
 
     bool closeGraspCb(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res) {
         ROS_INFO("Closing grasp to position: %f", close_pos_);
-        magnum_->setPosition(close_pos_);
+        gecko_->setPosition(close_pos_);
         return true;
     }
 };
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "magnum_node");
+    ros::init(argc, argv, "gecko_node");
     ros::NodeHandle nh("~");
 
-    MagnumWrapper magnum_wrapper(nh);
+    GeckoWrapper gecko_wrapper(nh);
 
-    magnum_wrapper.initializeHand();
+    gecko_wrapper.initializeHand();
     ROS_INFO("Initialized");
 
     ros::Rate loop_rate(100); 
     
     while (ros::ok()) {
-        magnum_wrapper.spinControlLoop();
-        magnum_wrapper.publishState();
+        gecko_wrapper.spinControlLoop();
+        gecko_wrapper.publishState();
         ros::spinOnce();
         loop_rate.sleep();
     }
