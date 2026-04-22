@@ -49,6 +49,8 @@ class GeckoGripperDriver {
     GripperState latest_state_;
 
     bool sendCmd();
+
+    int loop_counter = 0;
 };
 
 } // namespace gecko

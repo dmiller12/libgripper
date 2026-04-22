@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     gripper.setPosition(-0.2);
-    for (int i = 0; i < 200; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         // gripper.updateLocalState();
         gripper.controlLoopCallback();
 
@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
                   << "Vel: " << state.velocity << " | "
                   << "Trq: " << state.torque << std::endl;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 
     gripper.shutdown();

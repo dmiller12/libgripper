@@ -1,5 +1,4 @@
 #include "gripper/gecko/gecko_gripper_driver.h"
-
 #include <algorithm>
 #include <boost/outcome/try.hpp>
 #include <stdexcept>
@@ -86,7 +85,15 @@ bool GeckoGripperDriver::sendCmd() {
     receive_frames_.clear();
     
     // Transmit whatever is currently in send_frames_
+    auto moteus_start = std::chrono::steady_clock::now();
     transport_->BlockingCycle(&send_frames_[0], send_frames_.size(), &receive_frames_);
+    auto moteus_end = std::chrono::steady_clock::now();
+
+    if (++loop_counter % 500 == 0) {
+        std::cout << "[Gripper] Moteus execution round-trip: " 
+                  << std::chrono::duration<double, std::milli>(moteus_end - moteus_start).count() 
+                  << " ms\n";
+    }
 
     // Parse the response
     for (auto it = receive_frames_.rbegin(); it != receive_frames_.rend(); ++it) {
