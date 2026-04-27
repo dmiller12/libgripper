@@ -23,11 +23,16 @@ bool GeckoGripperDriver::connect(const GeckoGripperConfig& config) {
     }
 
    try {
-        // change the transport depending on the config.moteus.transport_args
-        transport_ = std::make_shared<moteus::Fdcanusb>(config.can_interface);
-        // moteus::Socketcan::Options can_opts;
-        // can_opts.ifname = config.can_interface;
-        // transport_ = std::make_shared<moteus::Socketcan>(can_opts);
+        if (config.transport_type == "pcie") {
+            moteus::Socketcan::Options can_opts;
+            can_opts.ifname = config.transport_pcie;
+            transport_ = std::make_shared<moteus::Socketcan>(can_opts);
+        } else if (config.transport_type == "usb") {
+            transport_ = std::make_shared<moteus::Fdcanusb>(config.transport_usb);
+        } else {
+            throw std::runtime_error("Invalid transport_type in config. Must be 'usb' or 'pcie'.");
+        }
+
 
         moteus::Controller::Options opts;
         opts.id = config.motor_id;
@@ -89,11 +94,11 @@ bool GeckoGripperDriver::sendCmd() {
     transport_->BlockingCycle(&send_frames_[0], send_frames_.size(), &receive_frames_);
     auto moteus_end = std::chrono::steady_clock::now();
 
-    if (++loop_counter % 500 == 0) {
-        std::cout << "[Gripper] Moteus execution round-trip: " 
-                  << std::chrono::duration<double, std::milli>(moteus_end - moteus_start).count() 
-                  << " ms\n";
-    }
+    // if (++loop_counter % 500 == 0) {
+    //     std::cout << "[Gripper] Moteus execution round-trip: " 
+    //               << std::chrono::duration<double, std::milli>(moteus_end - moteus_start).count() 
+    //               << " ms\n";
+    // }
 
     // Parse the response
     for (auto it = receive_frames_.rbegin(); it != receive_frames_.rend(); ++it) {

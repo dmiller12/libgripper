@@ -16,7 +16,9 @@ struct PidConfig {
 };
 
 struct GeckoGripperConfig {
-    std::string can_interface{"can0"};
+    std::string transport_type;
+    std::string transport_usb;
+    std::string transport_pcie;
     int motor_id{1};
     PidConfig pid_position;
     double min_pos;
@@ -45,7 +47,21 @@ struct convert<gripper::gecko::PidConfig> {
 template <>
 struct convert<gripper::gecko::GeckoGripperConfig> {
     static bool decode(const Node& node, gripper::gecko::GeckoGripperConfig& c) {
-        if (node["can_interface"]) c.can_interface = node["can_interface"].as<std::string>();
+        // fallback to usbfd
+        if (node["transport_type"]) {
+            c.transport_type = node["transport_type"].as<std::string>();
+        } else {
+            c.transport_type = "usb"; 
+        }
+
+        // Decode specific transport arguments
+        if (node["transport_usb"]) {
+            c.transport_usb = node["transport_usb"].as<std::string>();
+        }
+        if (node["transport_pcie"]) {
+            c.transport_pcie = node["transport_pcie"].as<std::string>();
+        }
+
         if (node["motor_id"]) c.motor_id = node["motor_id"].as<int>();
         if (node["pid_position"]) c.pid_position = node["pid_position"].as<gripper::gecko::PidConfig>();
         c.min_pos = node["min_pos"].as<double>();

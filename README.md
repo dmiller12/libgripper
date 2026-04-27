@@ -42,3 +42,28 @@ These supervisory calls can be convenient in that they do follow a smooth trajec
 You can control the hand from an external computer by using the serial cable connected to Zeus' motherboard.
 Then, on Zeus, run the `./bridge_serial` from the home directory. This takes communication from `/dev/ttyS1` and passes it to the hand serial port `/dev/ttyS0`. 
 Then you can communicate with the hand from an external computer, this is typically `/dev/ttyUSB0` when using the serial to USB converter.
+
+### Gecko gripper Using pciefd
+
+in gecko_gripper.yaml set transport_type: "pcie" and rebuild
+
+then, either run ```source wam_ws/src/wam_teleop/scripts/can_init_pcifd.sh``` or manually setup the wrist as follows:
+
+```
+sudo modprobe peak_pciefd
+
+sudo ip link set <your-can-interface> down || true
+sudo ip link set <your-can-interface> type can bitrate 1000000 dbitrate 5000000 sjw 10 dsjw 5 sample-point 0.666 dsample-point 0.666 restart-ms 1000 fd on
+sudo ip link set <your-can-interface> up
+```
+
+### Gecko gripper Using usb
+
+in gecko_gripper.yaml set transport_type: "usb" and rebuild
+
+can interface does not need to be setup with usb like in pcie as we are using a serial connection.
+
+**If the transport_type is not provided or an empty string is used, the default fdcanusb transport method will be used.**
+
+### HELP
+- make sure that the motor id for the gripper is 3 or that it matches motor_id in the config. I used 3 because 1 and 2 are used by the magnum opus wrist.
