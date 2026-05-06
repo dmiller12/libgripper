@@ -1,5 +1,5 @@
 gecko_gripper:
-  transport_type: "usb" # one of usb or pcie
+  transport_type: "pcie" # one of usb or pcie
   transport_usb: "/dev/serial/by-id/usb-mjbots_fdcanusb_5B75C352-if00"
   transport_pcie: "can2"
   motor_id: 3
@@ -7,7 +7,7 @@ gecko_gripper:
     kp: 15.0
     ki: 0.0
     kd: 5
-  min_pos: -0.35
-  max_pos: 0.005
+  min_pos: -0.05
+  max_pos: 0.17
   max_vel: 0.01
   max_acc: 0.01
