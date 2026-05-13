@@ -7,6 +7,7 @@
 #include <cmath>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace gripper {
 namespace barrett {
@@ -47,6 +48,12 @@ class BarrettHand {
     boost::optional<RealtimeControlSetpoint> controlLoopCallback(const RealtimeFeedback& feedback);
     bool startRealtimeControl();
     bool isDeviceInitialized();
+    void applyFingerPositionSync(
+        std::array<double, 4>& commanded_velocity,
+        const HandState& state,
+        const std::vector<MotorID>& finger_motors,
+        double dt
+    );
 
     std::unique_ptr<BarrettHandDriver> driver_;
     std::array<double, 4> target_position_{};
@@ -60,10 +67,11 @@ class BarrettHand {
     RealtimeSettings realtime_settings_;
     ControlMode control_mode_{ControlMode::None};
     PositionController position_contoller_{{18.0, 18.0, 18.0, 0.1}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}};
-    PositionController sync_position_contoller_{{4.0, 4.0, 4.0, 0.0}, {0.1, 0.1, 0.1, 0.0}, {0.001, 0.001, 0.001, 0.0}};
-    bool sync_position_{true};
-    VelocityController velocity_contoller_{{40, 40, 40, 0.05}, {10.0, 10.0, 10.0, 0.1}, {0.1, 0.1, 0.1, 0.0}};
-    static constexpr double FINGER_ALPHA = 0.8;
+    PositionController sync_position_contoller_{{2.0, 2.0, 2.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}};
+    bool sync_position_{false};
+    std::array<double, 4> sync_velocity_trim_{};
+    VelocityController velocity_contoller_{{8, 8, 8, 0.05}, {0.0, 0.0, 0.0, 0.0}, {0.01, 0.01, 0.01, 0.0}};
+    static constexpr double FINGER_ALPHA = 0.5;
     static constexpr double SPREAD_ALPHA = 0.3;
     LowPassFilter velocity_filter_{{FINGER_ALPHA, FINGER_ALPHA, FINGER_ALPHA, SPREAD_ALPHA}};
 };

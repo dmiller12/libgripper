@@ -7,6 +7,21 @@
 namespace gripper {
 namespace barrett {
 
+namespace {
+
+constexpr double kSyncCommandDeadband = 1e-4;
+constexpr double kSyncPositionDeadband = 0.025;
+constexpr double kSyncMaxVelocityTrim = 0.6;
+constexpr double kSyncMinVelocityTrim = 0.08;
+constexpr double kSyncMaxVelocityTrimFraction = 0.5;
+constexpr double kSyncTrimFilterAlpha = 0.25;
+
+double clampValue(double value, double low, double high) {
+    return std::max(low, std::min(high, value));
+}
+
+} // namespace
+
 BarrettHand::BarrettHand()
     : driver_(std::make_unique<BarrettHandDriver>()) {
 }
@@ -233,6 +248,70 @@ void printState(const HandState& handState) {
     }
 }
 
+void BarrettHand::applyFingerPositionSync(
+    std::array<double, 4>& commanded_velocity,
+    const HandState& state,
+    const std::vector<MotorID>& finger_motors,
+    double dt
+) {
+    std::vector<MotorID> active_fingers;
+    active_fingers.reserve(finger_motors.size());
+    for (const MotorID& motor : finger_motors) {
+        const auto index = static_cast<size_t>(motor);
+        if (std::abs(commanded_velocity[index]) > kSyncCommandDeadband) {
+            active_fingers.push_back(motor);
+        } else {
+            sync_velocity_trim_[index] = 0.0;
+        }
+    }
+
+    if (active_fingers.size() < 2) {
+        for (const MotorID& motor : finger_motors) {
+            sync_velocity_trim_[static_cast<size_t>(motor)] = 0.0;
+        }
+        return;
+    }
+
+    double position_total = 0.0;
+    for (const MotorID& motor : active_fingers) {
+        position_total += state.joint_positions[static_cast<size_t>(motor)];
+    }
+    const double position_average = position_total / static_cast<double>(active_fingers.size());
+
+    std::array<double, 4> position_reference = state.joint_positions;
+    for (const MotorID& motor : active_fingers) {
+        position_reference[static_cast<size_t>(motor)] = position_average;
+    }
+    const std::array<double, 4> raw_trim =
+        sync_position_contoller_.computeControl(position_reference, state.joint_positions, dt);
+
+    for (const MotorID& motor : active_fingers) {
+        const auto index = static_cast<size_t>(motor);
+        const double base_velocity = commanded_velocity[index];
+        const double position_error = position_average - state.joint_positions[index];
+        const double trim_limit = std::min(
+            kSyncMaxVelocityTrim,
+            std::max(kSyncMinVelocityTrim, std::abs(base_velocity) * kSyncMaxVelocityTrimFraction)
+        );
+
+        double target_trim = 0.0;
+        if (std::abs(position_error) > kSyncPositionDeadband) {
+            target_trim = clampValue(raw_trim[index], -trim_limit, trim_limit);
+        }
+
+        sync_velocity_trim_[index] =
+            (kSyncTrimFilterAlpha * target_trim) + ((1.0 - kSyncTrimFilterAlpha) * sync_velocity_trim_[index]);
+
+        double synced_velocity = base_velocity + sync_velocity_trim_[index];
+        if (base_velocity > 0.0) {
+            synced_velocity = std::max(0.0, synced_velocity);
+        } else {
+            synced_velocity = std::min(0.0, synced_velocity);
+        }
+        commanded_velocity[index] = synced_velocity;
+    }
+}
+
 boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const RealtimeFeedback& feedback) {
     HandState local_state;
 
@@ -304,21 +383,9 @@ boost::optional<RealtimeControlSetpoint> BarrettHand::controlLoopCallback(const 
         case ControlMode::Velocity:
 
             if (local_sync_position) {
-                double position_total = 0;
-                for (const MotorID& m : fingerMotors) {
-                    auto mIdx = static_cast<size_t>(m);
-                    position_total += local_state.joint_positions[mIdx];
-                }
-                double position_avg = position_total / fingerMotors.size();
-
-                std::array<double, 4> correction = sync_position_contoller_.computeControl(
-                    {position_avg, position_avg, position_avg, 0}, local_state.joint_positions, dt
-                );
-
-                for (const MotorID& m : fingerMotors) {
-                    auto mIdx = static_cast<size_t>(m);
-                    commanded_velocity_rad[mIdx] += correction[mIdx];
-                }
+                applyFingerPositionSync(commanded_velocity_rad, local_state, fingerMotors, dt);
+            } else {
+                sync_velocity_trim_.fill(0.0);
             }
 
             auto accel = velocity_contoller_.computeControl(
